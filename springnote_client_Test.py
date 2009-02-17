@@ -2,8 +2,11 @@
 # -*- coding: utf-8 -*-
 
 import unittest
+from mock import Mock
 import os, sys
-from springnote_client import *
+#from springnote_client import SpringnoteClient, httplib
+import springnote_client
+#import oauth
 
 #class BasicAuthTestCase(unittest.TestCase):
 #    def test_auth_info_header(self):
@@ -21,7 +24,7 @@ class OAuthTestCase(unittest.TestCase):
     def setUp(self):
         self.consumer_token, self.consumer_token_secret = 'some consumer token key', 'some consumer secret'
         #auth = OAuth(consumer_token, consumer_token_secret)
-        self.client = SpringnoteClient(self.consumer_token, self.consumer_token_secret)
+        self.client = springnote_client.SpringnoteClient(self.consumer_token, self.consumer_token_secret)
 
     def test_oauth_consumer_token(self):
         ''' SpringnoteClient should have OAuthConsumer instance consumer,
@@ -41,14 +44,33 @@ class OAuthTestCase(unittest.TestCase):
         
     def test_fetching_request_token_receives_proper_data(self):
         """  """
-        https_connection = Mock("httplib.HTTPSConnection")
-        https_connection.mock_returns = Mock("connection")
-        https_connection.mock_returns.getresponse.mock_returns = Mock("response")
-        https_connection.mock_returns.getresponse.mock_returns.read.mock_returns = "oauth_token=cd&oauth_token_secret=ab&open_id=http%3A%2F%2Fchanju.myid.net%2F"
+        #https_connection = Mock("httplib.HTTPSConnection")
+        #https_connection.mock_returns = Mock("connection")
+        #https_connection.mock_returns.getresponse.mock_returns = Mock("response")
+        #https_connection.mock_returns.getresponse.mock_returns.read.mock_returns = "oauth_token=cd&oauth_token_secret=ab&open_id=http%3A%2F%2Fchanju.myid.net%2F"
+
+        springnote_client.httplib = Mock({
+            'HTTPSConnection': Mock({
+                'request': '123',
+                'getresponse': Mock({'read': "oauth_token=cd&oauth_token_secret=ab&open_id=http%3A%2F%2Fchanju.myid.net%2F"})
+            })
+        })         
+            
         data = self.client.fetch_request_token()
-        self.assertEqual(type(data), oauth.OAuthToken)
+        self.assertEqual(type(data), springnote_client.oauth.OAuthToken)
+        self.assertEqual(type(data.key), str)
+        self.assertEqual(type(data.secret), str)
         
-        #pass
+    def test_fetching_request_token_raises_not_authorized_exception_when_token_is_wrong(self):
+        """ raise exception when unauthorized """
+        springnote_client.httplib = Mock({
+            'HTTPSConnection': Mock({
+                'request': '123',
+                'getresponse': Mock({'read': "Invalid OAuth Request (signature_invalid, base string: POST&https%3A%2F%2Fapi.springnote.com%2Foauth%2Frequest_token&oauth_consumer_key%3Dsome%252Bconsumer%252Btoken%252Bkey%26oauth_nonce%3D39982135%26oauth_signature_method%3DHMAC-SHA1%26oauth_timestamp%3D1234870498%26oauth_version%3D1.0)"})
+            })
+        })         
+        
+        self.assertRaises(springnote_client.SpringnoteError.NotAuthorized, self.client.fetch_request_token)
 
     #def test_oauth_access_token(self):
     #    """ should fetch the access token and make it a valid access token """

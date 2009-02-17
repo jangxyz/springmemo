@@ -20,4 +20,11 @@ class SpringnoteClient:
         connection = httplib.HTTPSConnection("%s:%d" % ('api.springnote.com', 443))
         connection.request(oauth_request.http_method, self.REQUEST_TOKEN_URL, headers=oauth_request.to_header()) 
         response = connection.getresponse()
-        return oauth.OAuthToken.from_string(response.read())
+        body = response.read()
+        if body.startswith('Invalid OAuth Request'):
+            raise SpringnoteError.NotAuthorized
+        return oauth.OAuthToken.from_string(body)
+
+class SpringnoteError:
+    class NotAuthorized(RuntimeError):
+        pass
