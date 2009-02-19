@@ -1,0 +1,30 @@
+Sun Jun 19 16:37:30 BST 2005 dkirby
+===================================
+
+- added 'after' and 'until' parameters to setExpectation
+- added expectParam and  condition function EQ
+
+mock.py
+MockUnitTest.py
+
+- added all the other conditional functions
+- updated the doc
+
+MockUnitTest.py
+mock.html
+mock.py
+mock.txt
+
+
+=================================================================
+update.log
+
+On every CVS commit, add an entry to the top of this file with the
+date, committer(s), a short explanation of the reason for the commit
+(starting with a '-' and indented), and a list of the modified files
+(not indented).
+
+=================================================================
+
+
+

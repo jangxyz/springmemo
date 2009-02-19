@@ -1,0 +1,12 @@
+This is a mock object package modeled on java's easytest.  It
+handles properties, functions, methods, classes, and generators.
+It also allows you to mock out methods within existing modules
+and classes.  (E.g. mocking out os.listdir for the duraction
+of a test.)
+
+If you have any questions then please contact me. My address
+is jeff@theblobshop.com.
+
+-jeff
+
+

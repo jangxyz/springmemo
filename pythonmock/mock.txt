@@ -1,0 +1,562 @@
+======================
+The Python Mock Module
+======================
+
+..  This is the source doc for the HTML page - run it through docutils
+    rst2html.py to create the HTML.
+
+.. contents::
+
+Introduction
+============
+
+A problem that frequently occurs when writing unit tests is how to test
+a unit in isolation from other classes.
+
+One solution to this problem is to create Mock Objects that mimic
+interface of the classes that the unit depends on. The Mock Object can
+then return canned values in response to method calls, or check that
+the expected methods are called with the correct arguments. Mock
+Objects are described in detail in the paper by Tim Mackinnon and Steve
+Freeman that can be found on the MockObjects website: http://www.mockobjects.com
+
+One problem with Mock objects is that they can be tedious to create. In
+a statically typed language every method in the interface must be
+stubbed out, even if it is never called, or if the test is not
+interested in the call. Fortunately with a dynamically typed language
+such as Python there is an alternative way of creating Mock Objects.
+
+The Python Mock Class
+=====================
+
+The idea behind the Python Mock class is simple. It can mimic any other
+Python class, and then be examined to see what methods have been called
+and what the parameters to the call were. The constructor for the Mock
+class takes an optional dictionary specifying method names and
+values to return when that method is called. Methods that are not
+specified in the constructor return None.
+
+Method calls on a Mock Object are caught by the __getattr__ method and
+stored for later inspection. The __getattr__ method returns an
+intermediate object (MockCaller) that does all the work, so it is
+possible to treat it as a bound method.
+
+for example::
+
+    >>> from mock import Mock 
+    >>> myMock = Mock( {"foo" : "you called foo"} ) 
+    >>> myMock.foo() 
+    'you called foo' 
+    >>> f = myMock.foo 
+    >>> f 
+    <mock.MockCaller instance at 15d46d0> 
+    >>> f() 'you called foo' 
+    >>> f( "wibble" ) 
+    'you called foo' 
+    >>>
+
+It is possible to specify that successive calls to a method returns a
+sequence of values by using the ReturnValues or ReturnIterator objects.
+
+Sometimes you may need to access attributes of the Mock class that are
+not methods. The simplest way is to create the Mock object first then
+assign the attributes required before they are needed. For example::
+
+    >>> from mock import Mock 
+    >>> myMock = Mock() 
+    >>> myMock.greeting = "hello world" 
+    >>> print myMock.greeting 
+    hello world 
+    >>>
+
+Alternatively if the mock object is to be created in several places it
+may be preferable to create a subclass of Mock that initialises the
+attributes in the constructor.
+
+As well as making the history of method calls available for inspection, the
+Mock class also allows you to set up expectations, which are assertions made
+at the time that a method is called.  See below for more details on
+expectations.
+
+
+One other issue to be aware of is that __getattr__ takes precedence
+over the the normal builtin methods that classes have by default, such
+as __repr__, __str__, __hash__ etc. For example,
+
+>>> print myMock
+
+will fail since __repr__ will return None instead of a string.
+
+If the code you are testing makes use of these methods then you will
+need to derive a class from Mock that supplies the correct behaviour
+(see below for more on extending Mock). 
+
+Example Usage
+-------------
+
+Here is an example of how to use it in action. Assume you are testing
+an application that communicates with a database using the Python DB2.0
+API. You want to write a test for a function called 'persistData', but
+without having to create a database connection, populate the database
+with test data, etc. The persistData function takes two parameters - an
+object with the data to persist, and a database connection object. You
+can write the test like this::
+
+    class PersistanceTestCase(unittest.TestCase): 
+        def testPersistData(self): 
+            #set up the mock objects 
+            mockCursor = Mock()
+            mockDB = Mock( { "cursor" : mockCursor } ) 
+            #call the function to be tested
+            persistData(testData, mockDB) 
+            #test the correct calls were made on the database 
+            objects mockDB.mockCheckCall(0, 'cursor')
+            mockCursor.mockCheckCall(0, 
+                                     'execute', 
+                                     '...some SQL...',
+                                      someData) 
+            mockCursor.mockCheckCall(1, 
+                                     'execute', 
+                                     '...more SQL...', 
+                                      moreData) 
+            mockDB.mockCheckCall(1, 'commit')
+            mockDB.mockCheckCall(2, 'close')
+
+The test creates two mock objects, one for the database, and one for
+the cursor object that is returned when the cursor() method is called
+on the database.
+
+Retrieving information about method calls
+=========================================
+
+The Mock class has the following methods:
+
+* __init__(self, \*\*methodReturnValues): 
+
+    Initialises the mock object. It takes keyword parameters that specifies return
+    values for mocked methods. Methods that are not specified in the constructor
+    will return None.
+
+    The return values can be assigned either a single object, which will be
+    returned on every call, or to an instance of the ReturnValues(\*values) or
+    ReturnIterator(iterator) classes. 
+
+    These are created with a series of values or an iterator that returns
+    a series of values respectively, and each call to the method will return the
+    next element in the sequence. If there are more calls made than there are
+    elements in the sequence then an AssertionError will be raised.
+
+    For example::
+
+        >>> mock = Mock( { "getSquares":ReturnValues(1,4,9) } )
+        >>> mock.getSquares()
+        1
+        >>> mock.getSquares()
+        4
+        >>> mock.getSquares()
+        9
+        >>> mock.getSquares()
+        Traceback (most recent call last):
+          File "<interactive input>", line 1, in ?
+          File "C:\prj\mock\mock.py", line 99, in __call__
+            return returnVal
+          File "C:\prj\mock\mock.py", line 107, in next
+            def __iter__(self):
+        AssertionError: No more return values
+        >>>  
+
+* mockAddReturnValues(self, \**methodReturnValues ):
+
+    Add more return values to a mock object.  See the notes for __init__.
+    If a return value is specified for an existing method name, then the previous
+    return value is replaced with the new one.
+
+* mockGetAllCalls(): 
+
+    Returns a list of MockCall objects, encapsulating all the calls in the order
+    they were made.
+
+* mockGetNamedCalls( name ): 
+
+    Takes the name of a method and returns a list of MockCall objects representing
+    the calls to that method, in the order they were made.
+
+* mockCheckCall(self, tester, index, name, \*args, \*\*kwargs) 
+
+    Test that the index-th call to the mock object has the specified method name
+    and parameters. Uses tester.assertEqual to do the tests. For example::
+
+        class MockTestCase( unittest.TestCase ):
+            def test_single_call( self ):
+                mock = Mock()
+                mock.testMethod( "hello", key="some value" )
+                mock.mockCheckCall(self, 0, 'testMethod', "hello", key="some value" )
+
+* mockSetExpectation(name, testFn, after=0, until=0):
+
+    Sets an expectation on the method called 'name'.  Every time the method is
+    called the testFn is called to check that the expectation is correct.  The
+    method takes the following parameters::
+
+        mockObject:  the Mock object that the method is on
+        callObject:  the MockCall object representing the current call
+        count:       the total number of calls that have previously been made on the
+                     mockObject. i.e. the first method called will have a count of
+                     0.
+
+    The testFn should return True if the expectation succeeds, and false if it
+    does not.  If an expectation fails then the mock object will raise an
+    exception.  
+
+    You can specify that the expectation only applies to a range of calls using the optional
+    'after' and 'until' parameters.  For example:  mockSetExpectation(... after=2, until=5)
+    will create an expectation that will start after 2 calls have been made to the method, and stop on the
+    5th call, so will only be called on the 3rd and 4th calls to the method.
+
+
+
+Several expectations can be set up on the same method, and they will be tested
+in turn.
+
+Example:  Create an expectation on method foo that the first parameter will be
+less than ten.::
+
+    >>> mock = Mock( { "foo" : 42 } )
+    >>> mock.mockSetExpectation('foo', lambda mockobj, call, count: call.getParam(0) < 10)
+    >>> mock.foo(5)
+    42
+    >>> mock.foo(50)
+    Traceback (most recent call last):
+      File "<interactive input>", line 1, in ?
+      File "C:\prj\mock\mock.py", line 96, in __call__
+        returnVal = self.mock.mockReturnValues.get(self.name)
+    AssertionError: Expectation failed: foo(50)
+    >>>
+
+There are some pre-defined expectation functions. See below for details.
+
+
+
+The MockCall class
+==================
+
+
+The MockCall class encapsulates a single call. It saves the name of the method
+and the parameters passed to it, both positional and keyword.
+
+It has the following methods for retrieving this information:
+
+* __str__():
+
+    The standard Python string conversion returns a human-readable version of the
+    method call, approximately as it would look in the source code. Keyword
+    parameters are sorted into alphabetical order.
+
+    Example::
+
+        >>> myMock.SomeMethod( 2*2, 3+3, x=100, y=50, spam="blah blah blah" )
+        >>> call = myMock.mockGetNamedCalls('SomeMethod')[0]
+        >>> print call
+        SomeMethod(4, 6, spam='blah blah blah', x=100, y=50)
+
+* getName():
+
+    Returns the name of the method.
+
+* getParam(index):
+
+    Returns one of the parameters to the call. If index is an integer the method
+    returns a positional parameter. If index is a string then it returns a keyword
+    parameter.
+
+    Example (following on from above)::
+
+        >>> call.getParam(0)
+        4
+        >>> call.getParam(1)
+        6
+        >>> call.getParam('x')
+        100
+        >>> call.getParam('spam')
+        'blah blah blah'
+
+* checkArgs(\*args, \*\*kwargs):
+
+    Asserts that the positional and keyword arguments to
+    the call were the same as args and kwargs. Based on a suggestion by Max
+    Ischenko. It can be used in a unit test like this::
+
+        class MockTestCase( unittest.TestCase ):
+            def test_single_call( self ):
+                mock = Mock()
+                mock.testMethod( "hello", key="some value" )
+                call = mock.mockGetAllCalls()[0]
+                call.checkArgs(self, "hello",  key="some value" )
+
+
+Predefined expectations
+=======================
+
+There are currently four predefined expectations, and more may be added in
+future.  These are factory functions that return the actual expecation
+functions - see the source for details.
+
+* expectParams(\*params, \*\*keywordParams):
+
+    sets the expectation that the parameters to the method will match the given
+    params and keywordParams.  The match much be exact - e.g. missing keyword
+    parameters will cause the expectation to fail.
+
+* expectAfter(\*methodNames):
+
+    checks that all the methods specified have been called before the current
+    method.  This can be used for example to ensure that an initialisation method
+    has been called before the object is used.
+ 
+* expectException(exception, \*params, \*\*kwparams):
+
+    throws an exception with the given parameters.
+    By default this throws an exception on the first call to the method, but if
+    it is given a keyword parameter of "expectSuccessfulCalls" with an integer argument
+    then it will allow that many calls to succeed.
+
+    For Example::
+
+        >>> mock = Mock()
+        >>> mock.mockSetExpectation('foo', expectException(IndexError, expectSuccessfulCalls=2))
+        >>> mock.foo()
+        >>> mock.foo()
+        >>> mock.foo()
+        Traceback (most recent call last):
+          File "<interactive input>", line 1, in ?
+          File "E:\prj\mock\new\mock.py", line 215, in __call__
+            self.checkExpectations(thisCall, params, kwparams)
+          File "E:\prj\mock\new\mock.py", line 245, in checkExpectations
+            assert expectation(self.mock, thisCall, len(self.mock.mockAllCalledMethods)-1), 'Expectation failed: '+str(thisCall)
+          File "E:\prj\mock\new\mock.py", line 308, in fn
+            raise exception(*args, **kwargs)
+        IndexError
+        >>> 
+
+* expectParam(paramIdx, cond):
+
+    asserts that a single parameter matches the condition 'cond'.
+    'paramIdx' can either be an integer for a positional parameter, or a string
+    for a keyword parameter.
+    'cond' is a callable object that is passed the parameter and returns True if the condition
+    succeeds, and False if it does not.
+    There are a number of predefined cond function objects:
+
+    * EQ(value) tests that the parameter is equal to value
+
+    * NE(value) tests that the parameter is not equal to value
+
+    * LT(value) tests that the parameter is less than to value
+
+    * LE(value) tests that the parameter is less than or equal to value
+
+    * GT(value) tests that the parameter is greater than value
+
+    * GE(value) tests that the parameter is greater than or equal to value
+
+    * AND(\*condlist)  combines several conditionals by AND-ing them together. This allows
+                      complex conditional statements to be created.
+
+    * OR(\*condlist)   combines several conditionals by OR-ing them together. This allows
+                      complex conditional statements to be created.
+
+
+    * NOT(cond)     reverses the value of another conditional.
+
+    * MATCHES(regex, flags=0) matches the parameter with a regex.  Flags can be passed to the 
+                    method just as for the re.match function.
+
+    * SEQ(\*sequence) Takes a sequence of conditionals and compares them on successive calls to the 
+                    method being tested.  For example::
+
+                        mock.mockSetExpectation('someMethod', expectParam(0, SEQ( EQ(10), EQ(20), GT(100) ) ) )
+        
+                    will check that on the first call to mock.someMethod, parameter 0 is equal to 10,
+                    on the second call it is equal to 20,
+                    on the third call it is greater than 100.
+
+                    If the method has more calls than the length of the sequence, then an exception is raised and
+                    the test will fail.
+
+                    NOTE: the sequence is incremented only when this conditional is called.  AND and OR conditionals
+                    will do short circuit evaluations, so if SEQ is used in combination with them it may get out of step 
+                    and lead to unexpected results.
+
+    * IS(object)    tests for object identity, just like the 'is' keyword.
+
+    * ISINSTANCE(class) tests that the parameter is an instance of the given class.
+
+    * ISSUBCLASS(class) tests that the parameter is a subclass of the given class
+
+    * CONTAINS(value) tests that the parameter contains the given value (using the 'in' operator).
+
+    * IN(container)  tests that the parameter is in the given container (using the 'in' operator).
+
+    * HASATTR(attr)  tests that the parameter has the given attribute.  The 'attr' paramter must be a string with the attribute name.
+
+    * CALLABLE       tests that the parameter is a callable object, e.g. a function, class, or bound method.
+
+    * HASMETHOD(method) tests that parameter has the given method - i.e. that it has an attribute with that name and that the attribute is callable.  The 'method' parameter must be a string with the name of the method. 
+
+
+Some examples::
+
+    # test that parameter 0 is an integer between 0 and 100 inclusive
+    mock.mockSetExpectation('someMethod', expectParam( 0, AND( ISINSTANCE(int), GE(0), LE(100) ) ) )
+
+    # test that the keyword attribute 'color' has the value 'RED', 'GREEN' or 'BLUE'
+    mock.mockSetExpectation('someMethod', expectParam( 'color', IN( ['RED', 'GREEN', 'BLUE'] ) ) )
+
+    # test that parameter 0 is a dictionary that does not contain the key 'foo'
+    mock.mockSetExpectation('someMethod', expectParam( 0, AND( ISINSTANCE(dict), NOT(CONTAINS('foo') ) ) ) )
+
+
+
+
+Extending the Mock class
+========================
+
+There are times when the default behaviour of the Mock class is not sufficient
+for the tests you want to perform. Perhaps you need a method that does more
+than return the same value every time, or you want to make assertions about
+the call at the point that it is made rather than afterwards, or you want to
+raise an exception from within a method to test your unit's error handling. To
+do all these simply derive a new class from Mock and add the methods with the
+specialised behaviour. All the other methods will still be handled by the Mock
+class.
+
+There is one issue to watch out for. If you want the call to your specialised
+method to be recorded along with all the other methods then you must pass the
+method call up to the base class. However you cannot do this in the normal way
+because of the way that the call is intercepted by __getattr__. Instead the
+method must call __getattr__ directly to get a MockCaller object, then call
+the MockCaller to pass it the parameters.
+
+For example::
+
+    class MockSub( Mock ):
+         def getSquare( self, x ):
+             '''return the square of the parameter passed'''
+             #call base class method so that it gets recorded
+             Mock.__getattr__(self, 'getSquare')( x )
+             return x*x
+
+Interface Checking
+==================
+
+One problem with using Mocks in Python is that the unit tests can get out of
+sync with the production code. An interface method that is called through a
+mock object in a unit test may later be renamed in production code, but the
+mock and some production code that called it may be left using the old name.
+
+To protect against such problems, you can optionally pass in a class that is
+being mocked to the Mock constructor. As each call is made to the Mock object,
+it will check that a method with that name also exists on the real class, and
+the call parameters match the argument list of the original method.
+
+::
+
+    class MyOriginalClass:
+        def writeUserToDb(self, user):
+            '''Write the user to the database.'''
+            longRunningFunction(user)
+            #...
+
+    >>> from mock import Mock
+    >>> myMock = Mock({"writeUserToDb" : False}, MyOriginalClass)
+    >>> myMock.unknownFunc()
+    [snip traceback]
+    mock.MockInterfaceError: Calling mock method 'unknownFunc' that was not found in the original class
+    >>> myMock.writeUserToDb(None, 1)
+    [snip traceback]
+    mock.MockInterfaceError: Original writeUserToDb() takes 2 arguments (3 given)
+
+Methods with varargs, keyword parameters and/or defaults are also supported.
+
+Multiple Inheritance
+====================
+
+Sometimes you don't want to mock all the methods of a class; the real methods
+in the original class may be fine for many methods. For instance, a class that
+implements a template method pattern is designed to be subclassed. Template
+methods must each be implemented by all subclasses.
+
+You may want to assert how template methods are called based upon calls to the
+base class interface methods. In cases like this, you can multiply inherit
+from both the production class and from the Mock class. By subclassing from
+both, you get the default behaviours of the original methods, and method call
+recording from the Mock class.
+
+For example::
+
+    class TemplateMethodBase:
+        def func(self, x):
+            '''Calls template method "overflow" if x is too big.'''
+            if x > 10000000:
+                self.overflow(x)
+            return x*x
+        def overflow(self, x):
+            raise NotImplementedError
+
+    class TemplateMethodMock(TemplateMethodBase, Mock):
+        def overflow(self, x):
+            print "%d might be a little too big" % x
+
+    >>> m = TemplateMethodMock()
+    >>> m.func(20000000)
+    20000000 may be a little too big
+    400000000000000L
+    >>> print m.mockGetAllCalls()[0]
+    func(20000000)
+    >>> print m.mockGetAllCalls()[1]
+    overflow(20000000)
+ 
+This feature can be used in conjunction with expectations, for example to cause
+a method call on a non-mock object to raise an exception.  
+
+ 
+License
+=======
+
+This Python  module and associated files are released under the FreeBSD
+license. Essentially, you can do what you like with it except pretend you wrote
+it yourself.
+
+::
+
+    Copyright (c) 2005, Dave Kirby
+
+    All rights reserved.
+
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions are met:
+
+        * Redistributions of source code must retain the above copyright
+          notice, this list of conditions and the following disclaimer.
+
+        * Redistributions in binary form must reproduce the above copyright
+          notice, this list of conditions and the following disclaimer in the
+          documentation and/or other materials provided with the distribution.
+
+        * Neither the name of this library nor the names of its
+          contributors may be used to endorse or promote products derived from
+          this software without specific prior written permission.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+    ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+    WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+    DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+    ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+    (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+    ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+        mock@thedeveloperscoach.com
+

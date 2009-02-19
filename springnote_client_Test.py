@@ -72,15 +72,15 @@ class OAuthTestCase(unittest.TestCase):
         
         self.assertRaises(springnote_client.SpringnoteError.NotAuthorized, self.client.fetch_request_token)
 
-    #def test_oauth_access_token(self):
-    #    """ should fetch the access token and make it a valid access token """
-    #    self.client.access_token = None
-    #    assertEqual(type(self.client.access_token), oauth.OAuthToken)
+    def test_oauth_access_token(self):
+        """ should fetch the access token and make it a valid access token """
+        self.client.access_token = None
+        self.assertEqual(type(self.client.access_token), springnote_client.oauth.OAuthToken)
 
-    #def test_oauth_directly_set_access_token(self):
-    #    """ should directly set access token """
-    #    self.client.access_token = oauth.OAuthToken(token, key)
-    #    assertEqual(type(self.client.access_token), oauth.OAuthToken)
+    def test_oauth_directly_set_access_token(self):
+        """ should directly set access token """
+        self.client.access_token = springnote_client.oauth.OAuthToken(token, key)
+        self.assertEqual(type(self.client.access_token), springnote_client.oauth.OAuthToken)
 
 
 class SpringnoteClientTestCase(unittest.TestCase):
@@ -88,19 +88,22 @@ class SpringnoteClientTestCase(unittest.TestCase):
         # mock it out
         self.client = None
 
-    #def test_get_page_with_id(self):
-    #    id = 31752
-    #    page = self.client.get_page(id)
-    #    assertEqual( type(page), Page )
-    #    assertEqual( page.identifier, id )
+    def test_get_page_with_id(self):
+        id = 31752
+        page = self.client.get_page(id)
+        assertEqual( type(page), Page )
+        assertEqual( page.identifier, id )
 
-    #def test_create_page(self):
-    #    title, body = 'some title', 'some body'
-    #    page = self.client.create_page(title=title, source=body)
-    #    assertEqual( type(page), Page )
-    #    assertNotEqual( page.identifier, None )
-    #    assertEqual( page.title, title )
-    #    assertEqual( page.source, body )
+    def test_create_page(self):
+        title, body = 'some title', 'some body'
+        page = self.client.create_page(title=title, source=body)
+        assertEqual( type(page), Page )
+        assertNotEqual( page.identifier, None )
+        assertEqual( page.title, title )
+        assertEqual( page.source, body )
+
+    def test_update_page(self):
+        self.fail("Implement me")
 
 class ExceptionTestCase(unittest.TestCase):
     pass
