@@ -113,13 +113,21 @@ class SpringnoteClientTestCase(unittest.TestCase):
     def setUp(self):
         # mock it out
         #self.client = None
+        xml = open("./test.xml").read()
         springnote_client.httplib = Mock({
             'HTTPSConnection': Mock({
                 'request': '123',
                 'getresponse': Mock({'read': "oauth_token=we&oauth_token_secret=fk&open_id=http%3A%2F%2Fchanju.myid.net%2F"})
+            }),
+            'HTTPConnection': Mock({
+                'request': '123',
+                'getresponse': Mock({'read': "oauth_token=we&oauth_token_secret=fk&open_id=http%3A%2F%2Fchanju.myid.net%2F"})
             })
-        })         
-            
+        })
+        springnote_client.Page = Mock({
+#여기... 할차례(Mock만들어야함)
+
+        })
 
         
         self.consumer_token, self.consumer_token_secret = 'some consumer token key', 'some consumer secret'
@@ -131,9 +139,17 @@ class SpringnoteClientTestCase(unittest.TestCase):
     def test_get_page_with_id(self):
         id = 31752
         page = self.client.get_page(id)
-        #self.assertEqual( type(page), Page )
-        #self.assertEqual( page.identifier, id )
+        self.assertEqual( type(page), springnote_client.Page )
+        self.assertEqual(page.identifier, id)
         self.assertEqual( type(), str)
+
+    def test_parse_xml(self):
+        xml = open("./test.xml").read()
+        page = springnote_client.Page(xml)
+        print "---"
+        print page.to_s()
+        print "---"
+
 
     #def test_create_page(self):
     #    title, body = 'some title', 'some body'

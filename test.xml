@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<page xmlns="http://api.springnote.com">
+  <identifier type="integer">1029614</identifier>
+  <title>Mind Map - I Think</title>
+  <relation_is_part_of type="integer">522072</relation_is_part_of>
+  <date_modified type="datetime">2008-04-03T11:26:59Z</date_modified>
+  <uri>http://loocaworld.springnote.com/pages/1029614</uri>
+  <date_created type="datetime">2008-04-03T10:45:16Z</date_created>
+  <source>
+this is a test file.
+</source>
+  <rights nil="true"></rights>
+  <creator>http://loocaworld.myid.net/</creator>
+  <contributor_modified>http://loocaworld.myid.net/</contributor_modified>
+  <version type="integer">28</version>
+  <tags></tags>
+</page>
+
+
