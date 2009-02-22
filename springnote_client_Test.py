@@ -96,7 +96,8 @@ class OAuthTestCase(unittest.TestCase):
             })
         })         
             
-        data = self.client.fetch_access_token()
+        request_token = self.client.fetch_request_token()
+        data = self.client.fetch_access_token(request_token)
         self.assertEqual(type(data), springnote_client.oauth.OAuthToken)
         self.assertEqual(type(data.key), str)
         self.assertEqual(type(data.secret), str)
@@ -117,8 +118,6 @@ class OAuthTestCase(unittest.TestCase):
 
 class SpringnoteClientTestCase(unittest.TestCase):
     def setUp(self):
-        # mock it out
-        #self.client = None
         xml = open("./test.xml").read()
         springnote_client.httplib = Mock({
             'HTTPSConnection': Mock({
@@ -134,7 +133,9 @@ class SpringnoteClientTestCase(unittest.TestCase):
         self.consumer_token, self.consumer_token_secret = 'some consumer token key', 'some consumer secret'
         #auth = OAuth(consumer_token, consumer_token_secret)
         self.client = springnote_client.SpringnoteClient(self.consumer_token, self.consumer_token_secret)
-        data = self.client.fetch_access_token()
+
+        request_token = self.client.fetch_request_token()
+        data = self.client.fetch_access_token(request_token)
         self.access_token = data
 
         self.id = 4
@@ -167,16 +168,24 @@ class SpringnoteClientTestCase(unittest.TestCase):
         self.assertEqual(page.identifier, self.id)
 #        self.assertEqual( type(), str)
 
-    #def test_create_page(self):
-    #    title, body = 'some title', 'some body'
-    #    page = self.client.create_page(title=title, source=body)
-    #    assertEqual( type(page), Page )
-    #    assertNotEqual( page.identifier, None )
-    #    assertEqual( page.title, title )
-    #    assertEqual( page.source, body )
+    def test_create_page(self):
+        title, body = 'some title', 'this is a source'
+        page = self.client.create_page(title=title,source=body,domain="loocaworld")
+        self.assertEqual( type(page), springnote_client.Page )
+        self.assertNotEqual( page.identifier, None )
+        self.assertEqual( page.title, title )
+        self.assertEqual( page.source, body )
+
+
+
 
     #def test_update_page(self):
     #    self.fail("Implement me")
+
+
+
+
+
 
 class SpringnotePageClassTestCase(unittest.TestCase):
     def setUp(self):
@@ -193,37 +202,30 @@ class SpringnotePageClassTestCase(unittest.TestCase):
     "title": "TestPage"
 }}
         '''
+        self.attrset = ["rights", "source", "creator", "date_created", "contributor_modified", "date_modified", "relation_is_part_of", "identifier", "tags", "title"]
+    def test_create_page_without_parameters_has_attributes(self):
+        p = springnote_client.Page()
+        for attr_name in self.attrset:
+            self.assertTrue(attr_name in self.attrset)
+        
 
-
-    #def test_page_parse_xml(self):
-    #    self.fail("Not implementing xml yet")
-    #    xml = open("./test.xml").read()
-    #    page = springnote_client.Page(xml)
-    #    print "---"
-    #    print page.to_s()
-    #    print "---"
-
-#    "source": "\u003Cp\u003ENone\u003C/p\u003E\n",
     def test_parse_json_as_dictionary(self):
-
         p = springnote_client.Page()
         result = p.parse_json(self.json)
+        page = springnote_client.Page.from_json(self.json)
         for attr_name in ["rights", "source", "creator", "date_created", "contributor_modified", "date_modified", "relation_is_part_of", "identifier", "tags", "title"]:
-            self.assertTrue(attr_name in result)
-        
-        #self.assertEqual(p.parse_json(self.json), 
-        #                 {
-        #                     "rights": None,
-        #                     "source": "none source",
-        #                     "creator": "http://deepblue.myid.net/",
-        #                     "date_created": "2007/10/26 05:30:08 +0000",
-        #                     "contributor_modified": "http://deepblue.myid.net/",
-        #                     "date_modified": "2008/01/08 10:55:36 +0000",
-        #                     "relation_is_part_of": 1,
-        #                     "identifier": 4,
-        #                     "tags": "test test2",
-        #                     "title": "TestPage"
-        #                })
+            self.assertTrue(hasattr(p,attr_name))
+
+
+    def test_create_page_with_from_json_method(self):
+        p = springnote_client.Page.from_json(self.json)
+        self.assertTrue(isinstance(p,springnote_client.Page))
+        self.assertEqual(p.identifier,4)
+        self.assertEqual(p.source,"none source")
+        self.assertEqual(type(p.date_created),datetime)
+        self.assertEqual(type(p.date_modified),datetime)
+        self.assertEqual(type(p.identifier),int)
+        self.assertEqual(type(p.relation_is_part_of),int)
 
 
     def test_parse_json_and_saves_key_as_attributes(self):
@@ -233,7 +235,9 @@ class SpringnotePageClassTestCase(unittest.TestCase):
         self.assertEqual(p.identifier,4)
         self.assertEqual(p.source,"none source")
         self.assertEqual(type(p.date_created),datetime)
-        #self.assertEqual(p.date_created,)
+        self.assertEqual(type(p.date_modified),datetime)
+        self.assertEqual(type(p.identifier),int)
+        self.assertEqual(type(p.relation_is_part_of),int)
 
 
 

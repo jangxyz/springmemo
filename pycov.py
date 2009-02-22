@@ -2,6 +2,7 @@
 
 import subprocess
 import sys, os, time
+from datetime import datetime
 
 if len(sys.argv) < 3:
    print 'Usage: %s target_filename test_file' % sys.argv[0]
@@ -9,6 +10,9 @@ if len(sys.argv) < 3:
 
 filename = os.path.abspath(sys.argv[1])
 test = sys.argv[2]
+
+def get_timestamp():
+    return datetime.now()
 
 def get_mtime(filename):
    return os.stat(filename).st_mtime
@@ -19,6 +23,7 @@ while True:
    if last_changed_time != new_changed_time:
 #        os.popen('python %s' % test)
        result = subprocess.Popen(['python',test], stdout=subprocess.PIPE).communicate()[0]
+       print "[ %s ]" % get_timestamp()
        print result
        last_changed_time = new_changed_time
    time.sleep(1)

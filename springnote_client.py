@@ -28,7 +28,7 @@ class SpringnoteClient:
     def fetch_request_token(self):
         oauth_request = self.create_oauth_request_for_request_token()
                 
-        connection = httplib.HTTPSConnection("%s:%d" % ('api.springnote.com', 443))
+        connection = httplib.HTTPSConnection("%s:%d" % (self.SPRINGNOTE_SERVER, self.SPRINGNOTE_PORT))
         connection.request(oauth_request.http_method, self.REQUEST_TOKEN_URL, headers=oauth_request.to_header()) 
         response = connection.getresponse()
         body = response.read()
@@ -44,11 +44,11 @@ class SpringnoteClient:
     def fetch_access_token(self, token):
         oauth_request = self.create_oauth_request_for_access_token(token)
                 
-        connection = httplib.HTTPSConnection("%s:%d" % ('api.springnote.com', 443))
+        connection = httplib.HTTPSConnection("%s:%d" % (self.SPRINGNOTE_SERVER, self.SPRINGNOTE_PORT))
         connection.request(oauth_request.http_method, self.ACCESS_TOKEN_URL, headers=oauth_request.to_header()) 
         response = connection.getresponse()
         body = response.read()
-        print oauth_request, dir(oauth_request), oauth_request.http_method, self.ACCESS_TOKEN_URL, oauth_request.to_header(), body
+#        print oauth_request, dir(oauth_request), oauth_request.http_method, self.ACCESS_TOKEN_URL, oauth_request.to_header(), body
         if body.startswith('Invalid OAuth Request'):
             raise SpringnoteError.NotAuthorized
         
@@ -63,7 +63,7 @@ class SpringnoteClient:
             parameters['domain'] = domain
             url += "?domain=%s" % domain
         
-        print url
+#        print url
         oauth_request = oauth.OAuthRequest.from_consumer_and_token(self.consumer, token=self.access_token, http_method='GET', http_url=url, parameters=parameters)
         oauth_request.sign_request(self.signature_method, self.consumer, self.access_token)        
 
@@ -71,41 +71,87 @@ class SpringnoteClient:
         connection.request('GET', url, headers=oauth_request.to_header())
         response = connection.getresponse()
         body = response.read()
-        print "----body----"
-        print body
-        print "------------"
-        return Page(body)
+
+        return Page.from_json(body)
 
 
     def authorize_url(self, token):
         return "%s?oauth_token=%s" % (self.AUTHORIZATION_URL, token.key)
         
 
+    def create_page(self,title,source=None,domain=None):
+        url = "%s://%s/pages.json" % (self.SPRINGNOTE_PROTOCOL, self.SPRINGNOTE_SERVER)
+        parameters = {}
+        newpage = Page()
+        newpage.title = title
+        newpage.source = source
+
+#        parameters['json'] = newpage.to_json()
+        parameters = newpage.to_param()
+
+        print "url:: %s" % url
+
+        print "paramet:: %s"% parameters.items()
+        if domain:
+            parameters['domain'] = domain
+            url += "?domain=%s" % domain
+        if source==None:
+            source = ""
+        print "paramet:: %s"% parameters.items()
+
+        oauth_request = oauth.OAuthRequest.from_consumer_and_token(self.consumer, token=self.access_token, http_method='POST', http_url=url, parameters=parameters)
+        oauth_request.sign_request(self.signature_method, self.consumer, self.access_token)        
+
+        connection = httplib.HTTPSConnection("%s:%d" % (self.SPRINGNOTE_SERVER, self.SPRINGNOTE_PORT))
+        connection.request(oauth_request.http_method, url, headers=oauth_request.to_header())
+        response = connection.getresponse()
+        body = response.read()
+        print body
+
+
+
+
+
+
+
+
+
 class SpringnoteError:
     class NotAuthorized(RuntimeError):
         pass
 
 class Page:
-    def __init__(self, body=None):
-        #self.identifier = None
-        #self.date_created = None
-        #self.date_modified = None
-        #self.rights = None
-        #self.creator = None
-        #self.contributor_modified = None
+    typeset = {
+        'identifier': int,
+        'relation_is_part_of': int,
+
+        'date_created': lambda x: datetime.strptime(x,"%Y/%m/%d %H:%M:%S +0000"),
+        'date_modified': lambda x: datetime.strptime(x,"%Y/%m/%d %H:%M:%S +0000"),
+        'tags': lambda x: x.split()
+    }
+    attrset = ["rights", "source", "creator", "date_created", "contributor_modified", "date_modified", "relation_is_part_of", "identifier", "tags", "title"]
+
+    def __init__(self):
+        for attr_name in self.attrset:
+            setattr(self, attr_name, None)
+
+    def from_json(body):
+        newPage = Page()
+        newPage.parse_json(body)
+        return newPage
+    from_json = staticmethod(from_json)
+
+    def to_param(self):
+        result = {}
+        for attr_name,attr_value in self.__dict__.iteritems():
+            result['page[%s]' % attr_name] = attr_value
+        return result
 
 
-        self.typeset = {
-            'identifier': int,
-            'relation_is_part_of': int,
 
-            'date_created': lambda x: datetime.strptime(x,"%Y/%m/%d %H:%M:%S +0000"),
-            'date_modified': lambda x: datetime.strptime(x,"%Y/%m/%d %H:%M:%S +0000"),
-            'tags': lambda x: x.split()
-        }
 
-        if(body != None):
-            self.parse_json(body)
+    def to_json(self):
+        return json.dumps(self.__dict__)
 
     def parse_json(self,str):
         data = json.loads(str)
@@ -118,18 +164,18 @@ class Page:
         return data
         
 
-    def parse_xml(self,xml):
-        tree = ET.XML(xml)
-        self.identifier =  tree[0].text
-        self.date_created = tree[5].text
-        self.date_modified = tree[3].text
-        self.rights = tree[7].text
-        self.creator = tree[8].text
-        self.contributor_modified = tree[9].text
-        self.title = tree[1].text
-        self.source = tree[6].text
-        self.relation_is_part_of = tree[2].text
-        self.uri = tree[4].text
+#    def parse_xml(self,xml):
+#        tree = ET.XML(xml)
+#        self.identifier =  tree[0].text
+#        self.date_created = tree[5].text
+#        self.date_modified = tree[3].text
+#        self.rights = tree[7].text
+#        self.creator = tree[8].text
+#        self.contributor_modified = tree[9].text
+#        self.title = tree[1].text
+#        self.source = tree[6].text
+#        self.relation_is_part_of = tree[2].text
+#        self.uri = tree[4].text
 #        self.identifier =  tree.find('identifier').text
 #        self.date_created = tree.find('date_created').text
 #        self.date_modified = tree.find('date_modified').text
@@ -165,7 +211,12 @@ def run():
     access_token = client.fetch_access_token(request_token)
     print access_token.key, access_token.secret
 
-    print client.get_page(id, domain='loocaworld')
+#    page = client.get_page(id, domain='loocaworld')
+    result = client.create_page("titleis this","this is body",domain="loocaworld")
+#        print "----body----"
+#    print page.source
+    print result
+#        print "------------"
 
 
     
