@@ -3,6 +3,8 @@ import httplib
 #from etree import ElementTree
 #from xml import etree
 import xml.etree.ElementTree as ET
+import simplejson as json
+from datetime import datetime
 
 class SpringnoteClient:
 
@@ -39,13 +41,14 @@ class SpringnoteClient:
         oauth_request.sign_request(oauth.OAuthSignatureMethod_HMAC_SHA1(), self.consumer, token)
         return oauth_request
         
-    def fetch_access_token(self):
-        oauth_request = self.create_oauth_request_for_request_token()
+    def fetch_access_token(self, token):
+        oauth_request = self.create_oauth_request_for_access_token(token)
                 
         connection = httplib.HTTPSConnection("%s:%d" % ('api.springnote.com', 443))
         connection.request(oauth_request.http_method, self.ACCESS_TOKEN_URL, headers=oauth_request.to_header()) 
         response = connection.getresponse()
         body = response.read()
+        print oauth_request, dir(oauth_request), oauth_request.http_method, self.ACCESS_TOKEN_URL, oauth_request.to_header(), body
         if body.startswith('Invalid OAuth Request'):
             raise SpringnoteError.NotAuthorized
         
@@ -54,7 +57,7 @@ class SpringnoteClient:
     
     # todo
     def get_page(self, id, domain=None):
-        url = "%s://%s/pages/%d.xml" % (self.SPRINGNOTE_PROTOCOL, self.SPRINGNOTE_SERVER, id)
+        url = "%s://%s/pages/%d.json" % (self.SPRINGNOTE_PROTOCOL, self.SPRINGNOTE_SERVER, id)
         parameters = {}
         if domain:
             parameters['domain'] = domain
@@ -73,22 +76,48 @@ class SpringnoteClient:
         print "------------"
         return Page(body)
 
+
+    def authorize_url(self, token):
+        return "%s?oauth_token=%s" % (self.AUTHORIZATION_URL, token.key)
+        
+
 class SpringnoteError:
     class NotAuthorized(RuntimeError):
         pass
 
 class Page:
-    def __init__(self, xml=None):
+    def __init__(self, body=None):
         #self.identifier = None
         #self.date_created = None
         #self.date_modified = None
         #self.rights = None
         #self.creator = None
         #self.contributor_modified = None
-        if(xml != None):
-            self.parse_xml(xml)
 
+
+        self.typeset = {
+            'identifier': int,
+            'relation_is_part_of': int,
+
+            'date_created': lambda x: datetime.strptime(x,"%Y/%m/%d %H:%M:%S +0000"),
+            'date_modified': lambda x: datetime.strptime(x,"%Y/%m/%d %H:%M:%S +0000"),
+            'tags': lambda x: x.split()
+        }
+
+        if(body != None):
+            self.parse_json(body)
+
+    def parse_json(self,str):
+        data = json.loads(str)
+        data = data["page"]
+        for attr_name, attr_type in self.typeset.iteritems():
+            data[attr_name] = attr_type( data[attr_name] )
+
+        for key,value in data.iteritems():
+            setattr(self, key, value)
+        return data
         
+
     def parse_xml(self,xml):
         tree = ET.XML(xml)
         self.identifier =  tree[0].text
@@ -116,5 +145,34 @@ class Page:
         return "%s %s %s %s %s %s" % (self.identifier,self.date_created,
                 self.date_modified, self.rights,
                 self.creator, self.contributor_modified)
+
+
+
+
+def run():
+    token = "KUo2OdVplBeXmG4oSiWfA"
+    token_secret = "KSHdHxWfoP9o158RYiQ05SEtVYCHRBy5VFSwbiRB5Y"
+    id = 2759692
+
+    client = SpringnoteClient(token,token_secret)
+    client.create_oauth_request_for_request_token()
+    request_token = client.fetch_request_token()
+
+    print client.authorize_url(request_token)
+    raw_input("please Enter...")
+
+    #client.create_oauth_request_for_access_token(request_token)
+    access_token = client.fetch_access_token(request_token)
+    print access_token.key, access_token.secret
+
+    print client.get_page(id, domain='loocaworld')
+
+
+    
+
+
+if(__name__=='__main__'):
+    run()
+
 
 

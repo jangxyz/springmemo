@@ -6,6 +6,8 @@ from mock import Mock
 import os, sys
 #from springnote_client import SpringnoteClient, httplib
 import springnote_client
+import simplejson as json
+from datetime import datetime
 #import oauth
 
 class OAuthTestCase(unittest.TestCase):
@@ -61,10 +63,14 @@ class OAuthTestCase(unittest.TestCase):
         self.assertRaises(springnote_client.SpringnoteError.NotAuthorized, self.client.fetch_request_token)
 
 
+    #def test_authorize_url(self):
+    #    url = self.client.authorize_url()
+
 
 
     # url test
 
+    
 
 
 
@@ -124,11 +130,6 @@ class SpringnoteClientTestCase(unittest.TestCase):
                 'getresponse': Mock({'read': "oauth_token=we&oauth_token_secret=fk&open_id=http%3A%2F%2Fchanju.myid.net%2F"})
             })
         })
-        springnote_client.Page = Mock({
-#여기... 할차례(Mock만들어야함)
-
-        })
-
         
         self.consumer_token, self.consumer_token_secret = 'some consumer token key', 'some consumer secret'
         #auth = OAuth(consumer_token, consumer_token_secret)
@@ -136,20 +137,35 @@ class SpringnoteClientTestCase(unittest.TestCase):
         data = self.client.fetch_access_token()
         self.access_token = data
 
+        self.id = 4
+        self.jsons = '''{"page": {
+    "rights": null,
+    "source": "none source",
+    "creator": "http://deepblue.myid.net/",
+    "date_created": "2007/10/26 05:30:08 +0000",
+    "contributor_modified": "http://deepblue.myid.net/",
+    "date_modified": "2008/01/08 10:55:36 +0000",
+    "relation_is_part_of": 1,
+    "identifier": %d,
+    "tags": "test",
+    "title": "TestPage"
+}}
+        ''' % self.id
+
     def test_get_page_with_id(self):
-        id = 31752
-        page = self.client.get_page(id)
-        self.assertEqual( type(page), springnote_client.Page )
-        self.assertEqual(page.identifier, id)
-        self.assertEqual( type(), str)
 
-    def test_parse_xml(self):
-        xml = open("./test.xml").read()
-        page = springnote_client.Page(xml)
-        print "---"
-        print page.to_s()
-        print "---"
+        springnote_client.httplib = Mock({
+            'HTTPConnection': Mock({
+                'request': '123',
+                'getresponse': Mock({'read': self.jsons
+                })
+            })
+        })
 
+        page = self.client.get_page(self.id)
+        self.assertTrue( isinstance(page, springnote_client.Page ))
+        self.assertEqual(page.identifier, self.id)
+#        self.assertEqual( type(), str)
 
     #def test_create_page(self):
     #    title, body = 'some title', 'some body'
@@ -161,6 +177,78 @@ class SpringnoteClientTestCase(unittest.TestCase):
 
     #def test_update_page(self):
     #    self.fail("Implement me")
+
+class SpringnotePageClassTestCase(unittest.TestCase):
+    def setUp(self):
+        self.json = '''{"page": {
+    "rights": null,
+    "source": "none source",
+    "creator": "http://deepblue.myid.net/",
+    "date_created": "2007/10/26 05:30:08 +0000",
+    "contributor_modified": "http://deepblue.myid.net/",
+    "date_modified": "2008/01/08 10:55:36 +0000",
+    "relation_is_part_of": 1,
+    "identifier": 4,
+    "tags": "test",
+    "title": "TestPage"
+}}
+        '''
+
+
+    #def test_page_parse_xml(self):
+    #    self.fail("Not implementing xml yet")
+    #    xml = open("./test.xml").read()
+    #    page = springnote_client.Page(xml)
+    #    print "---"
+    #    print page.to_s()
+    #    print "---"
+
+#    "source": "\u003Cp\u003ENone\u003C/p\u003E\n",
+    def test_parse_json_as_dictionary(self):
+
+        p = springnote_client.Page()
+        result = p.parse_json(self.json)
+        for attr_name in ["rights", "source", "creator", "date_created", "contributor_modified", "date_modified", "relation_is_part_of", "identifier", "tags", "title"]:
+            self.assertTrue(attr_name in result)
+        
+        #self.assertEqual(p.parse_json(self.json), 
+        #                 {
+        #                     "rights": None,
+        #                     "source": "none source",
+        #                     "creator": "http://deepblue.myid.net/",
+        #                     "date_created": "2007/10/26 05:30:08 +0000",
+        #                     "contributor_modified": "http://deepblue.myid.net/",
+        #                     "date_modified": "2008/01/08 10:55:36 +0000",
+        #                     "relation_is_part_of": 1,
+        #                     "identifier": 4,
+        #                     "tags": "test test2",
+        #                     "title": "TestPage"
+        #                })
+
+
+    def test_parse_json_and_saves_key_as_attributes(self):
+        p = springnote_client.Page()
+        p.parse_json(self.json)
+
+        self.assertEqual(p.identifier,4)
+        self.assertEqual(p.source,"none source")
+        self.assertEqual(type(p.date_created),datetime)
+        #self.assertEqual(p.date_created,)
+
+
+
+
+class JsonImportExportTestCase(unittest.TestCase):
+    def setUp(self):
+        self.o = [1, 2, 3, None, False, {"a": "def"}]
+        self.s = '''[1, 2, 3, null, false, {"a": "def"}]'''
+
+    def test_parse_json_string_into_object(self):
+        self.assertEqual( json.loads(self.s), self.o )
+
+    def test_parse_object_into_json_string(self):
+        self.assertEqual( json.dumps(self.o), self.s)
+
 
 class ExceptionTestCase(unittest.TestCase):
     pass

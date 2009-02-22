@@ -13,9 +13,9 @@ test = sys.argv[2]
 def get_mtime(filename):
    return os.stat(filename).st_mtime
 
-last_changed_time = get_mtime(filename)
+last_changed_time = max(get_mtime(filename), get_mtime(test))
 while True:
-   new_changed_time = get_mtime(filename)
+   new_changed_time = max(get_mtime(filename), get_mtime(test))
    if last_changed_time != new_changed_time:
 #        os.popen('python %s' % test)
        result = subprocess.Popen(['python',test], stdout=subprocess.PIPE).communicate()[0]
