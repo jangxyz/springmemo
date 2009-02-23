@@ -112,8 +112,15 @@ class OAuthTestCase(unittest.TestCase):
     # todo
     def test_oauth_directly_set_access_token(self):
         """ should directly set access token """
-        #self.client.access_token = springnote_client.oauth.OAuthToken(token, key)
-        #self.assertEqual(type(self.client.access_token), springnote_client.oauth.OAuthToken)
+        key = "yzlqEHF22FmATMyh72TxsA"
+        secret = "uFHI07nwCMD6XK5ilaR8WuHsJUx4jL9q6V9vgn240"
+#        self.client.access_token = springnote_client.oauth.OAuthToken(token, key)
+        access_token = self.client.set_access_token_directly(key,secret)
+        self.assertEqual(type(access_token), springnote_client.oauth.OAuthToken)
+        self.assertEqual(type(self.client.access_token), springnote_client.oauth.OAuthToken)
+        self.assertEqual(access_token.key, self.client.access_token.key)
+        self.assertEqual(access_token.secret, self.client.access_token.secret)
+
 
 
 class SpringnoteClientTestCase(unittest.TestCase):

@@ -127,7 +127,7 @@ class OAuthRequest(object):
             for k, v in self.parameters.iteritems():
                 auth_header += ', %s="%s"' % (k, escape(str(v)))
 
-        print "auth_header:::: %s"%auth_header
+#        print "auth_header:::: %s"%auth_header
 
         return {'Authorization': auth_header}
 
