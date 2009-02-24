@@ -3,7 +3,9 @@
 import oauth
 import httplib,urllib
 import xml.etree.ElementTree as ET
-import simplejson as json
+#import simplejson as json
+#import lib.simplejson as json
+import lib.json as json
 from datetime import datetime
 
 class SpringnoteClient:
@@ -22,13 +24,12 @@ class SpringnoteClient:
         
     def create_oauth_request_for_request_token(self):
         oauth_request = oauth.OAuthRequest.from_consumer_and_token(self.consumer, http_url=self.REQUEST_TOKEN_URL)
-        oauth_request.sign_request(oauth.OAuthSignatureMethod_HMAC_SHA1(), self.consumer, None)
+        oauth_request.sign_request(self.signature_method, self.consumer, None)
         return oauth_request
         
     def fetch_request_token(self):
         oauth_request = self.create_oauth_request_for_request_token()
                 
-#        connection = httplib.HTTPSConnection("%s:%d" % (self.SPRINGNOTE_SERVER, self.SPRINGNOTE_PORT))
         connection = httplib.HTTPSConnection("%s:%d" % (self.SPRINGNOTE_SERVER, 443))
         connection.request(oauth_request.http_method, self.REQUEST_TOKEN_URL, headers=oauth_request.to_header())
         response = connection.getresponse()
@@ -39,18 +40,16 @@ class SpringnoteClient:
     
     def create_oauth_request_for_access_token(self, token):
         oauth_request = oauth.OAuthRequest.from_consumer_and_token(self.consumer, token=token, http_url=self.ACCESS_TOKEN_URL)
-        oauth_request.sign_request(oauth.OAuthSignatureMethod_HMAC_SHA1(), self.consumer, token)
+        oauth_request.sign_request(self.signature_method, self.consumer, token)
         return oauth_request
         
     def fetch_access_token(self, token):
         oauth_request = self.create_oauth_request_for_access_token(token)
                 
-#        connection = httplib.HTTPSConnection("%s:%d" % (self.SPRINGNOTE_SERVER, self.SPRINGNOTE_PORT))
         connection = httplib.HTTPSConnection("%s:%d" % (self.SPRINGNOTE_SERVER, 443))
         connection.request(oauth_request.http_method, self.ACCESS_TOKEN_URL, headers=oauth_request.to_header()) 
         response = connection.getresponse()
         body = response.read()
-#        print oauth_request, dir(oauth_request), oauth_request.http_method, self.ACCESS_TOKEN_URL, oauth_request.to_header(), body
         if body.startswith('Invalid OAuth Request'):
             raise SpringnoteError.NotAuthorized
         
@@ -69,7 +68,6 @@ class SpringnoteClient:
             parameters['domain'] = domain
             url += "?domain=%s" % domain
         
-#        print url
         oauth_request = oauth.OAuthRequest.from_consumer_and_token(self.consumer, token=self.access_token, http_method='GET', http_url=url, parameters=parameters)
         oauth_request.sign_request(self.signature_method, self.consumer, self.access_token)        
 
@@ -78,7 +76,7 @@ class SpringnoteClient:
         response = connection.getresponse()
         body = response.read()
 
-        return Page.from_json(body)
+        return Page.from_jsons(body)
 
 
     def authorize_url(self, token):
@@ -86,55 +84,92 @@ class SpringnoteClient:
         
 
     def create_page(self,title,source=None,domain=None):
-#        url = "%s://%s/pages.json" % (self.SPRINGNOTE_PROTOCOL, self.SPRINGNOTE_SERVER)
-        url = "%s://%s/pages.xml" % (self.SPRINGNOTE_PROTOCOL, self.SPRINGNOTE_SERVER)
+        url = "%s://%s/pages.json" % (self.SPRINGNOTE_PROTOCOL, self.SPRINGNOTE_SERVER)
+#        url = "%s://%s/pages.xml" % (self.SPRINGNOTE_PROTOCOL, self.SPRINGNOTE_SERVER)
         parameters = {}
         newpage = Page()
         newpage.title = title
         newpage.source = source
 
-
-#        print "url:: %s" % url
-
         if domain:
             parameters['domain'] = domain
             url += "?domain=%s" % domain
-        else:
-            url += "?"
 
-### URL에 해보자
-#        for key,value in newpage.to_write_param().iteritems():
-#            url += "&%s=%s" % (urllib.quote(key), urllib.quote(value))
-#            url += "&%s=%s" % (key, urllib.quote(value))
-        
-        print "url:: %s" % url
-####
 
         oauth_request = oauth.OAuthRequest.from_consumer_and_token(self.consumer, token=self.access_token, http_method='POST', http_url=url, parameters=parameters)
         oauth_request.sign_request(self.signature_method, self.consumer, self.access_token)
 
-#        connection = httplib.HTTPConnection("%s:%d" % (self.SPRINGNOTE_SERVER, self.SPRINGNOTE_PORT))
-        connection = httplib.HTTPSConnection("%s:%d" % (self.SPRINGNOTE_SERVER, 443))
-#        connection = httplib.HTTPSConnection("%s" % self.SPRINGNOTE_SERVER)
+        connection = httplib.HTTPConnection("%s:%d" % (self.SPRINGNOTE_SERVER, self.SPRINGNOTE_PORT))
         myheaders = oauth_request.to_header()
 
+#        myheaders.update({'Content-Type':'application/xml'})
+        myheaders.update({'Content-Type':'application/json'})
+#        body = newpage.to_write_xml()
+        body = newpage.to_write_json()
 
-### headers에 해보자
-#        headers.update(json = newpage.to_write_json())
-#        headers.update(xml = urllib.quote(newpage.to_write_xml()))
-        myheaders.update(newpage.to_write_param())
-
-        connection.request(oauth_request.http_method, url, headers=myheaders)
-        print "headers ::::::: %s" % myheaders
-#        connection.request(oauth_request.http_method, url, headers=oauth_request.to_header(),body=body)
+        connection.request(oauth_request.http_method, url, headers=myheaders,body=body)
         response = connection.getresponse()
         body = response.read()
+        print "-----body-----"
         print body
+        print "--------------"
+        result = json.loads(body)
+        print "type:::::::%s" % type(result)
+        if type(result) == dict:
+            print "TYPE::::::::::::::DICT"
+            if result.has_key('errors'):
+                for error in json.loads(body)['errors']:
+                    if error['description'].startswith('has already been taken'):
+                        raise SpringnoteError.CannotCreatePage
+        elif type(result) == list:
+            print "TYPE::::::::::::::LISt"
+            for r in result:
+#                if r.has_key('error') and r['error']['error_type'].startswith("InvalidOauthRequest"):
+                if r.has_key('error') and r['error']['description'].startswith("signature_invalid"):
+                    raise SpringnoteError.InvalidSignature
+
+        return Page.from_jsons(body)
+
+    def update_page(self,page,domain=None):
+        url = "%s://%s/pages/%d.json" % (self.SPRINGNOTE_PROTOCOL, self.SPRINGNOTE_SERVER,page.identifier)
+        parameters = {}
+
+        print "update_page page type :: %s" % isinstance(page,Page)
+        print "datetime :: %s" % page.date_created
+
+        if domain:
+            parameters['domain'] = domain
+            url += "?domain=%s" % domain
+
+        oauth_request = oauth.OAuthRequest.from_consumer_and_token(self.consumer, token=self.access_token, http_method='PUT', http_url=url, parameters=parameters)
+        oauth_request.sign_request(self.signature_method, self.consumer, self.access_token)
+
+        connection = httplib.HTTPConnection("%s:%d" % (self.SPRINGNOTE_SERVER, self.SPRINGNOTE_PORT))
+        myheaders = oauth_request.to_header()
+
+        myheaders.update({'Content-Type':'application/json'})
+        body = page.to_write_json()
+
+        connection.request(oauth_request.http_method, url, headers=myheaders,body=body)
+        response = connection.getresponse()
+        body = response.read()
+        print "----body----"
+        print body
+        print "------------"
+
+        return Page.from_jsons(body)
+
 
 
 
 class SpringnoteError:
     class NotAuthorized(RuntimeError):
+        pass
+    class CannotCreatePage(RuntimeError):
+        pass
+    class InvalidOauthRequest(RuntimeError):
+        pass
+    class InvalidSignature(RuntimeError):
         pass
 
 class Page:
@@ -152,45 +187,45 @@ class Page:
         for attr_name in self.attrset:
             setattr(self, attr_name, None)
 
-    def from_json(body):
+    def from_jsons(body):
         newPage = Page()
         newPage.parse_json(body)
         return newPage
-    from_json = staticmethod(from_json)
+    from_jsons = staticmethod(from_jsons)
 
-    def to_param(self):
-        result = {}
-        for attr_name,attr_value in self.__dict__.iteritems():
-#            if(attr_value != None) and (attr_value != False):
-#                result['page[%s]' % attr_name] = attr_value
-            result['page[%s]' % attr_name] = attr_value
-        return result
+#    def to_param(self):
+#        result = {}
+#        for attr_name,attr_value in self.__dict__.iteritems():
+#            result['page[%s]' % attr_name] = attr_value
+#        return result
 
-    def to_json(self):
-#        return json.dumps(self.__dict__)
-        result = {}
-        for key,value in self.__dict__.iteritems():
-            if value != None:
-                result[key] = value
-        print "\nreulst:::\n%s" % result
-        return json.dumps(result)
+#    def to_json(self):
+#        result = {}
+#        for key,value in self.__dict__.iteritems():
+#            if value != None:
+#                result[key] = value
+#        return json.dumps(result)
 
-    def to_write_param(self):
-        result = {}
-        result['page[title]'] = self.title
-        result['page[source]'] = self.source
+#    def to_write_param(self):
+#        result = {}
+#        result['page[title]'] = self.title
+#        result['page[source]'] = self.source
 #        result['page[relation_is_part_of]'] = self.relation_is_part_of
 #        result['page[tags]'] = self.tags
-        return result
+#        return result
 
 
     def to_write_json(self):
-        result = {}
-        result['title'] = self.title
-        result['source'] = self.source
-        result['relation_is_part_of'] = self.relation_is_part_of
-        result['tags'] = self.tags
-        return json.dumps(result)
+### type이 datetime일시에 맨 뒤에 +0000을 붙이던가, strptime으로 
+#        page = {}
+#        result = {}
+#        page['title'] = self.title
+#        page['source'] = self.source
+#        page['relation_is_part_of'] = self.relation_is_part_of
+#        page['tags'] = self.tags
+#        result['page'] = page
+#        return json.dumps({'page':page})
+        return json.dumps({'page':self.__dict__})
 
     def to_write_xml(self):
         root = ET.Element("page")
@@ -203,11 +238,6 @@ class Page:
         tags = ET.SubElement(root,"tags")
         tags.text = self.tags
         return ET.tostring(root,"utf-8")
-
-
-
-                
-
 
 
     def parse_json(self,str):
@@ -230,11 +260,12 @@ class Page:
 
 
 def run():
-    token = "KUo2OdVplBeXmG4oSiWfA"
-    token_secret = "KSHdHxWfoP9o158RYiQ05SEtVYCHRBy5VFSwbiRB5Y"
+    token = "wpRiJvvQy624FayfQ6Q"
+    token_secret = "GHY2La7yR2moQUXO2ETiuuiAtqFCCa37bO6uAXC6Yw"
     id = 2759692
-    access_key = "yzlqEHF22FmATMyh72TxsA"
-    access_secret = "uFHI07nwCMD6XK5ilaR8WuHsJUx4jL9q6V9vgn240"
+    access_key = "FHksYUxDz5sNpxXZ3Yq9Qg"
+#    access_key = "FHksYUxDz5sNpxXZ3Yq9Qk"  #wrong access_key
+    access_secret = "5ILhwSbmQCFBL4A8orCBna8zwLAbC2iIRPxRfRZgQls"
 
     client = SpringnoteClient(token,token_secret)
 #    request_token = client.fetch_request_token()
@@ -247,10 +278,10 @@ def run():
     print access_token.key, access_token.secret
 
 #    page = client.get_page(id, domain='loocaworld')
-    result = client.create_page(title="titleis this",source="this is body",domain="loocaworld")
+    page = client.create_page(title="titleis this6",source="this is body",domain="loocaworld")
     print "----body----"
-#    print page.source
-    print result
+    print page.source
+#    print result
     print "------------"
 
 

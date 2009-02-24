@@ -6,7 +6,11 @@ from mock import Mock
 import os, sys
 #from springnote_client import SpringnoteClient, httplib
 import springnote_client
-import simplejson as json
+#import simplejson as json
+#import lib.simplejson as json
+import lib.json as json
+
+
 from datetime import datetime
 #import oauth
 
@@ -145,7 +149,8 @@ class SpringnoteClientTestCase(unittest.TestCase):
         data = self.client.fetch_access_token(request_token)
         self.access_token = data
 
-        self.id = 4
+#        self.id = 4
+        self.id = 2775538
         self.jsons = '''{"page": {
     "rights": null,
     "source": "none source",
@@ -176,20 +181,121 @@ class SpringnoteClientTestCase(unittest.TestCase):
 #        self.assertEqual( type(), str)
 
     def test_create_page(self):
-        title, body = 'some title', 'this is a source'
+
+        springnote_client.httplib = Mock({
+            'HTTPConnection': Mock({
+                'request': '123',
+                'getresponse': Mock({'read': self.jsons
+                })
+            })
+        })
+
+        title, body = 'TestPage', 'none source'
         page = self.client.create_page(title=title,source=body,domain="loocaworld")
-        self.assertEqual( type(page), springnote_client.Page )
+
+        call = springnote_client.httplib.mockGetNamedCalls("HTTPConnection")[0]
+        self.assertEqual(call.getName(),"HTTPConnection")
+        self.assertEqual(call.getParam(0),"api.springnote.com:80")
+        self.assertTrue( isinstance(page, springnote_client.Page ))
         self.assertNotEqual( page.identifier, None )
         self.assertEqual( page.title, title )
         self.assertEqual( page.source, body )
 
+    def test_create_page_raises_cannot_create_page_exception_when_already_same_title(self):
+        returnbody = '{"errors":[{"title": "name", "description": "has already been taken"}]}'
+
+        springnote_client.httplib = Mock({
+            'HTTPConnection': Mock({
+                'request': '123',
+                'getresponse': Mock({'read': returnbody})
+            })
+        })
+        title, body = 'TestPage', 'none source'
+
+        self.assertRaises(springnote_client.SpringnoteError.CannotCreatePage, self.client.create_page,title=title,source=body,domain="loocaworld")
+    def test_create_page_raises_invalid_oauth_request_exception_when_init_with_wrong_access_token(self):
+        returnbody = '''
+            [{"error": {"error_type": "InvalidOauthRequest", "description": "signature_invalid, base string: POST\u0026http%3A%2F%2Fapi.springnote.com%2Fpages.json\u0026domain%3Dloocaworld%26oauth_consumer_key%3DwpRiJvvQy624FayfQ6Q%26oauth_nonce%3D63475398%26oauth_signature_method%3DHMAC-SHA1%26oauth_timestamp%3D1235461259%26oauth_token%3DFHksYUxDz5sNpxXZ3Yq9Qk%26oauth_version%3D1.0"}}]
+        '''
+
+        springnote_client.httplib = Mock({
+            'HTTPConnection': Mock({
+                'request': '123',
+                'getresponse': Mock({'read': returnbody})
+            })
+        })
+        title, body = 'TestPage', 'none source'
+        altclient = springnote_client.SpringnoteClient(self.consumer_token, self.consumer_token_secret)
+        altclient.set_access_token_directly("wrong key","wrong secret")
+        self.assertRaises(springnote_client.SpringnoteError.InvalidSignature, altclient.create_page,title=title,source=body,domain="loocaworld")
 
 
+    def test_from_jsons(self):
+        newjsons = '''{"page": {
+    "rights": null,
+    "source": "none sourceedited",
+    "creator": "http://deepblue.myid.net/",
+    "date_created": "2007/10/26 05:30:08 +0000",
+    "contributor_modified": "http://deepblue.myid.net/",
+    "date_modified": "2008/01/08 10:55:36 +0000",
+    "relation_is_part_of": 1,
+    "identifier": %d,
+    "tags": "testedited",
+    "title": "TestPageedited"
+}}
+        ''' % self.id
 
-    #def test_update_page(self):
-    #    self.fail("Implement me")
+        newpage = springnote_client.Page.from_jsons(newjsons)
+        self.assertEqual(newpage.rights, None)
+        self.assertEqual(newpage.source, "none sourceedited")
+        self.assertEqual(newpage.creator, "http://deepblue.myid.net/")
+        self.assertEqual(newpage.contributor_modified, "http://deepblue.myid.net/")
+        self.assertEqual(newpage.date_created, datetime.strptime("2007/10/26 05:30:08 +0000","%Y/%m/%d %H:%M:%S +0000"))
+        self.assertEqual(newpage.date_modified, datetime.strptime("2008/01/08 10:55:36 +0000","%Y/%m/%d %H:%M:%S +0000"))
+        self.assertEqual(newpage.relation_is_part_of, 1)
+        self.assertEqual(newpage.identifier, self.id)
+        self.assertEqual(newpage.tags, ["testedited"])
+        self.assertEqual(newpage.title, "TestPageedited")
+    
+#### getpage 쪽도 에러 처리 해줘야 할 듯
 
 
+    def test_update_page_with_id(self):
+        
+        newjsons = '''{"page": {
+    "rights": null,
+    "source": "none sourceedited",
+    "creator": "http://deepblue.myid.net/",
+    "date_created": "2007/10/26 05:30:08 +0000",
+    "contributor_modified": "http://deepblue.myid.net/",
+    "date_modified": "2008/01/08 10:55:36 +0000",
+    "relation_is_part_of": 1,
+    "identifier": %d,
+    "tags": "testedited",
+    "title": "TestPageedited"
+}}
+        ''' % self.id
+
+        newpage = springnote_client.Page.from_jsons(newjsons)
+
+        springnote_client.httplib = Mock({
+            'HTTPConnection': Mock({
+                'request': '123',
+                'getresponse': Mock({'read': newjsons
+                })
+            })
+        })
+
+        title, body = 'TestPage', 'none source'
+        page = self.client.update_page(page=newpage,domain="loocaworld")
+
+        call = springnote_client.httplib.mockGetNamedCalls("HTTPConnection")[0]
+        self.assertEqual(call.getName(),"HTTPConnection")
+        self.assertEqual(call.getParam(0),"api.springnote.com:80")
+        self.assertTrue( isinstance(page, springnote_client.Page ))
+        self.assertNotEqual( page.identifier, None )
+        self.assertEqual( page.title, newpage.title )
+        self.assertEqual( page.source, newpage.body )
 
 
 
@@ -219,13 +325,13 @@ class SpringnotePageClassTestCase(unittest.TestCase):
     def test_parse_json_as_dictionary(self):
         p = springnote_client.Page()
         result = p.parse_json(self.json)
-        page = springnote_client.Page.from_json(self.json)
+        page = springnote_client.Page.from_jsons(self.json)
         for attr_name in ["rights", "source", "creator", "date_created", "contributor_modified", "date_modified", "relation_is_part_of", "identifier", "tags", "title"]:
             self.assertTrue(hasattr(p,attr_name))
 
 
-    def test_create_page_with_from_json_method(self):
-        p = springnote_client.Page.from_json(self.json)
+    def test_create_page_with_from_jsons_method(self):
+        p = springnote_client.Page.from_jsons(self.json)
         self.assertTrue(isinstance(p,springnote_client.Page))
         self.assertEqual(p.identifier,4)
         self.assertEqual(p.source,"none source")
@@ -260,6 +366,17 @@ class JsonImportExportTestCase(unittest.TestCase):
     def test_parse_object_into_json_string(self):
         self.assertEqual( json.dumps(self.o), self.s)
 
+    def test_parse_datetime_to_json(self):
+        now = datetime.strptime("2007/10/26 05:30:08 +0000","%Y/%m/%d %H:%M:%S +0000")
+        def encode_datetime(obj):
+            if isinstance(obj, datetime):
+                return obj.strftime("%Y/%m/%d %H:%M:%S +0000")
+            raise TypeError(repr(obj) + " is not JSON serializable")
+
+        #self.assertEqual(json.dumps(now, default=encode_datetime), '"2007/10/26 05:30:08 +0000"')
+        self.assertEqual(json.dumps(now), '"2007/10/26 05:30:08 +0000"')
+        self.assertEqual(json.dumps([1,2,True], default=encode_datetime), '[1, 2, true]')
+
 
 class ExceptionTestCase(unittest.TestCase):
     pass
@@ -268,7 +385,15 @@ class ExceptionTestCase(unittest.TestCase):
     #    some_function = lambda x: x
     #    self.assertRaises(SpringnoteError.NotFound, some_function)
 
+def suite():
+    suite = unittest.TestSuite()
+    suite.addTest(JsonImportExportTestCase('test1_parse_datetime_to_json'))
+    return suite
+
 if __name__ == '__main__':
-    unittest.main()
+    #unittest.main(defaultTest=suite())
+    loader = unittest.defaultTestLoader
+    loader.testMethodPrefix = 'test'
+    unittest.main(testLoader = loader)
 
 
