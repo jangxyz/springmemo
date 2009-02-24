@@ -93,8 +93,15 @@ class SpringnoteClient:
 
         if domain:
             parameters['domain'] = domain
-            url += "?domain=%s" % domain
+            url += "?domain=%s&" % domain
+        else:
+            url += "?"
 
+
+        param_iterator = newpage.to_write_param().iteritems()
+        url += '&'.join(["%s=%s" % (key, urllib.quote(value)) for key, value in param_iterator])
+
+        print url
 
         oauth_request = oauth.OAuthRequest.from_consumer_and_token(self.consumer, token=self.access_token, http_method='POST', http_url=url, parameters=parameters)
         oauth_request.sign_request(self.signature_method, self.consumer, self.access_token)
@@ -103,16 +110,17 @@ class SpringnoteClient:
         myheaders = oauth_request.to_header()
 
 #        myheaders.update({'Content-Type':'application/xml'})
-        myheaders.update({'Content-Type':'application/json'})
+#        myheaders.update({'Content-Type':'application/json'})
 #        body = newpage.to_write_xml()
-        body = newpage.to_write_json()
+#        body = newpage.to_write_json()
 
-        connection.request(oauth_request.http_method, url, headers=myheaders,body=body)
+#        connection.request(oauth_request.http_method, url, headers=myheaders,body=body)
+        connection.request(oauth_request.http_method, url, headers=myheaders)
         response = connection.getresponse()
         body = response.read()
-#        print "-----body-----"
-#        print body
-#        print "--------------"
+        print "-----body-----"
+        print body
+        print "--------------"
         result = json.loads(body)
         if type(result) == dict:
             if result.has_key('errors'):
@@ -181,11 +189,12 @@ class Page:
         for attr_name in self.attrset:
             setattr(self, attr_name, None)
 
+    @staticmethod
     def from_jsons(body):
+        """ generate a Page instance from json string """
         newPage = Page()
-        newPage.parse_json(body)
+        newPage.update_from_jsons(body)
         return newPage
-    from_jsons = staticmethod(from_jsons)
 
 #    def to_param(self):
 #        result = {}
@@ -200,25 +209,17 @@ class Page:
 #                result[key] = value
 #        return json.dumps(result)
 
-#    def to_write_param(self):
-#        result = {}
-#        result['page[title]'] = self.title
-#        result['page[source]'] = self.source
-#        result['page[relation_is_part_of]'] = self.relation_is_part_of
-#        result['page[tags]'] = self.tags
-#        return result
+    def to_write_param(self):
+        result = {}
+        result['page[title]'] = self.title
+        result['page[source]'] = self.source
+        #result['page[relation_is_part_of]'] = self.relation_is_part_of
+        #result['page[tags]'] = self.tags
+        return result
 
 
+    # FIXME: self.__dict__ 대신 attrset 써서 구현해주세요
     def to_write_json(self):
-### type이 datetime일시에 맨 뒤에 +0000을 붙이던가, strptime으로 
-#        page = {}
-#        result = {}
-#        page['title'] = self.title
-#        page['source'] = self.source
-#        page['relation_is_part_of'] = self.relation_is_part_of
-#        page['tags'] = self.tags
-#        result['page'] = page
-#        return json.dumps({'page':page})
         return json.dumps({'page':self.__dict__})
 
     def to_write_xml(self):
@@ -234,7 +235,8 @@ class Page:
         return ET.tostring(root,"utf-8")
 
 
-    def parse_json(self,str):
+    def update_from_jsons(self,str):
+        """ update parsing json string """
         data = json.loads(str)
         data = data["page"]
         for attr_name, attr_type in self.typeset.iteritems():
