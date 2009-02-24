@@ -110,23 +110,19 @@ class SpringnoteClient:
         connection.request(oauth_request.http_method, url, headers=myheaders,body=body)
         response = connection.getresponse()
         body = response.read()
-        print "-----body-----"
-        print body
-        print "--------------"
+#        print "-----body-----"
+#        print body
+#        print "--------------"
         result = json.loads(body)
-        print "type:::::::%s" % type(result)
         if type(result) == dict:
-            print "TYPE::::::::::::::DICT"
             if result.has_key('errors'):
                 for error in json.loads(body)['errors']:
                     if error['description'].startswith('has already been taken'):
                         raise SpringnoteError.CannotCreatePage
         elif type(result) == list:
-            print "TYPE::::::::::::::LISt"
             for r in result:
-#                if r.has_key('error') and r['error']['error_type'].startswith("InvalidOauthRequest"):
-                if r.has_key('error') and r['error']['description'].startswith("signature_invalid"):
-                    raise SpringnoteError.InvalidSignature
+                if r.has_key('error') and r['error']['error_type'].startswith("InvalidOauthRequest"):
+                    raise SpringnoteError.InvalidOauthRequest
 
         return Page.from_jsons(body)
 
@@ -168,8 +164,6 @@ class SpringnoteError:
     class CannotCreatePage(RuntimeError):
         pass
     class InvalidOauthRequest(RuntimeError):
-        pass
-    class InvalidSignature(RuntimeError):
         pass
 
 class Page:
@@ -278,11 +272,15 @@ def run():
     print access_token.key, access_token.secret
 
 #    page = client.get_page(id, domain='loocaworld')
-    page = client.create_page(title="titleis this6",source="this is body",domain="loocaworld")
+    page = client.create_page(title="titleis this7",source="this is body",domain="loocaworld")
     print "----body----"
     print page.source
 #    print result
     print "------------"
+
+    page.title = "EDITED TITLE!!!"
+    page.source = "This page is hacked"
+    newpage = client.update_page(page,domain='loocaworld')
 
 
     

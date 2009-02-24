@@ -227,7 +227,7 @@ class SpringnoteClientTestCase(unittest.TestCase):
         title, body = 'TestPage', 'none source'
         altclient = springnote_client.SpringnoteClient(self.consumer_token, self.consumer_token_secret)
         altclient.set_access_token_directly("wrong key","wrong secret")
-        self.assertRaises(springnote_client.SpringnoteError.InvalidSignature, altclient.create_page,title=title,source=body,domain="loocaworld")
+        self.assertRaises(springnote_client.SpringnoteError.InvalidOauthRequest, altclient.create_page,title=title,source=body,domain="loocaworld")
 
 
     def test_from_jsons(self):
@@ -295,7 +295,7 @@ class SpringnoteClientTestCase(unittest.TestCase):
         self.assertTrue( isinstance(page, springnote_client.Page ))
         self.assertNotEqual( page.identifier, None )
         self.assertEqual( page.title, newpage.title )
-        self.assertEqual( page.source, newpage.body )
+        self.assertEqual( page.source, newpage.source )
 
 
 
@@ -385,10 +385,6 @@ class ExceptionTestCase(unittest.TestCase):
     #    some_function = lambda x: x
     #    self.assertRaises(SpringnoteError.NotFound, some_function)
 
-def suite():
-    suite = unittest.TestSuite()
-    suite.addTest(JsonImportExportTestCase('test1_parse_datetime_to_json'))
-    return suite
 
 if __name__ == '__main__':
     #unittest.main(defaultTest=suite())
