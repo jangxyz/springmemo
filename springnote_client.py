@@ -94,14 +94,14 @@ class SpringnoteClient:
         if domain:
             parameters['domain'] = domain
             url += "?domain=%s&" % domain
-        else:
-            url += "?"
+#        else:
+#            url += "?"
 
 
-        param_iterator = newpage.to_write_param().iteritems()
-        url += '&'.join(["%s=%s" % (key, urllib.quote(value)) for key, value in param_iterator])
+#        param_iterator = newpage.to_write_param().iteritems()
+#        url += '&'.join(["%s=%s" % (key, urllib.quote(value)) for key, value in param_iterator])
 
-        print url
+#        print url
 
         oauth_request = oauth.OAuthRequest.from_consumer_and_token(self.consumer, token=self.access_token, http_method='POST', http_url=url, parameters=parameters)
         oauth_request.sign_request(self.signature_method, self.consumer, self.access_token)
@@ -110,12 +110,12 @@ class SpringnoteClient:
         myheaders = oauth_request.to_header()
 
 #        myheaders.update({'Content-Type':'application/xml'})
-#        myheaders.update({'Content-Type':'application/json'})
+        myheaders.update({'Content-Type':'application/json'})
 #        body = newpage.to_write_xml()
-#        body = newpage.to_write_json()
+        body = newpage.to_write_json()
 
-#        connection.request(oauth_request.http_method, url, headers=myheaders,body=body)
-        connection.request(oauth_request.http_method, url, headers=myheaders)
+        connection.request(oauth_request.http_method, url, headers=myheaders,body=body)
+#        connection.request(oauth_request.http_method, url, headers=myheaders)
         response = connection.getresponse()
         body = response.read()
         print "-----body-----"
@@ -137,9 +137,6 @@ class SpringnoteClient:
     def update_page(self,page,domain=None):
         url = "%s://%s/pages/%d.json" % (self.SPRINGNOTE_PROTOCOL, self.SPRINGNOTE_SERVER,page.identifier)
         parameters = {}
-
-        print "update_page page type :: %s" % isinstance(page,Page)
-        print "datetime :: %s" % page.date_created
 
         if domain:
             parameters['domain'] = domain
@@ -163,6 +160,39 @@ class SpringnoteClient:
 
         return Page.from_jsons(body)
 
+    def delete_page(self,id,domain=None):
+        url = "%s://%s/pages/%d.json" % (self.SPRINGNOTE_PROTOCOL, self.SPRINGNOTE_SERVER,id)
+        parameters = {}
+
+        if domain:
+            parameters['domain'] = domain
+            url += "?domain=%s" % domain
+
+        oauth_request = oauth.OAuthRequest.from_consumer_and_token(self.consumer, token=self.access_token, http_method='DELETE', http_url=url, parameters=parameters)
+        oauth_request.sign_request(self.signature_method, self.consumer, self.access_token)
+
+        connection = httplib.HTTPConnection("%s:%d" % (self.SPRINGNOTE_SERVER, self.SPRINGNOTE_PORT))
+        myheaders = oauth_request.to_header()
+
+        connection.request(oauth_request.http_method, url, headers=myheaders)
+        response = connection.getresponse()
+        body = response.read()
+        print "----body----"
+        print body
+        print "------------"
+        result = json.loads(body)
+        if type(result) == dict:
+            if result.has_key('errors'):
+                for error in json.loads(body)['errors']:
+                    if error['description'].startswith('has already been taken'):
+                        raise SpringnoteError.CannotCreatePage
+        elif type(result) == list:
+            for r in result:
+                if r.has_key('error') and r['error']['error_type'].startswith("NotFound"):
+                    raise SpringnoteError.PageNotFound
+
+        return Page.from_jsons(body)
+
 
 
 
@@ -172,6 +202,8 @@ class SpringnoteError:
     class CannotCreatePage(RuntimeError):
         pass
     class InvalidOauthRequest(RuntimeError):
+        pass
+    class PageNotFound(RuntimeError):
         pass
 
 class Page:
@@ -220,7 +252,12 @@ class Page:
 
     # FIXME: self.__dict__ 대신 attrset 써서 구현해주세요
     def to_write_json(self):
-        return json.dumps({'page':self.__dict__})
+#        return json.dumps({'page':self.__dict__})
+        result = {}
+        for attr_name in self.attrset:
+            result[attr_name] = getattr(self,attr_name)
+        return json.dumps({'page':result})
+
 
     def to_write_xml(self):
         root = ET.Element("page")
@@ -258,9 +295,8 @@ class Page:
 def run():
     token = "wpRiJvvQy624FayfQ6Q"
     token_secret = "GHY2La7yR2moQUXO2ETiuuiAtqFCCa37bO6uAXC6Yw"
-    id = 2759692
+    id = 2778240
     access_key = "FHksYUxDz5sNpxXZ3Yq9Qg"
-#    access_key = "FHksYUxDz5sNpxXZ3Yq9Qk"  #wrong access_key
     access_secret = "5ILhwSbmQCFBL4A8orCBna8zwLAbC2iIRPxRfRZgQls"
 
     client = SpringnoteClient(token,token_secret)
@@ -275,8 +311,9 @@ def run():
 
 #    page = client.get_page(id, domain='loocaworld')
     page = client.create_page(title="titleis this7",source="this is body",domain="loocaworld")
+
     print "----body----"
-    print page.source
+#    print page.source
 #    print result
     print "------------"
 
@@ -285,6 +322,7 @@ def run():
     newpage = client.update_page(page,domain='loocaworld')
 
 
+    result = client.delete_page(page.identifier,domain='loocaworld')
     
 
 

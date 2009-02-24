@@ -132,6 +132,20 @@ class SpringnoteClientTestCase(unittest.TestCase):
             }}
         ''' % self.id
 
+        self.newjsons = '''
+        {"page": {
+                "rights": null,
+                "source": "none sourceedited",
+                "creator": "http://deepblue.myid.net/",
+                "date_created": "2007/10/26 05:30:08 +0000",
+                "contributor_modified": "http://deepblue.myid.net/",
+                "date_modified": "2008/01/08 10:55:36 +0000",
+                "relation_is_part_of": 1,
+                "identifier": %d,
+                "tags": "testedited",
+                "title": "TestPageedited"
+        }}''' % self.id
+
 
     def test_get_page_with_id(self):
         springnote_client.httplib = Mock({
@@ -206,21 +220,7 @@ class SpringnoteClientTestCase(unittest.TestCase):
 
 
     def test_from_jsons(self):
-        newjsons = '''
-        {"page": {
-                "rights": null,
-                "source": "none sourceedited",
-                "creator": "http://deepblue.myid.net/",
-                "date_created": "2007/10/26 05:30:08 +0000",
-                "contributor_modified": "http://deepblue.myid.net/",
-                "date_modified": "2008/01/08 10:55:36 +0000",
-                "relation_is_part_of": 1,
-                "identifier": %d,
-                "tags": "testedited",
-                "title": "TestPageedited"
-        }}''' % self.id
-
-        newpage = springnote_client.Page.from_jsons(newjsons)
+        newpage = springnote_client.Page.from_jsons(self.newjsons)
 
         self.assertEqual(newpage.rights, None)
         self.assertEqual(newpage.source, "none sourceedited")
@@ -237,27 +237,13 @@ class SpringnoteClientTestCase(unittest.TestCase):
 
 
     def test_update_page_with_id(self):
-        
-        newjsons = '''
-        {"page": {
-                "rights": null,
-                "source": "none sourceedited",
-                "creator": "http://deepblue.myid.net/",
-                "date_created": "2007/10/26 05:30:08 +0000",
-                "contributor_modified": "http://deepblue.myid.net/",
-                "date_modified": "2008/01/08 10:55:36 +0000",
-                "relation_is_part_of": 1,
-                "identifier": %d,
-                "tags": "testedited",
-                "title": "TestPageedited"
-        }}''' % self.id
 
-        newpage = springnote_client.Page.from_jsons(newjsons)
+        newpage = springnote_client.Page.from_jsons(self.newjsons)
 
         springnote_client.httplib = Mock({
             'HTTPConnection': Mock({
                 'request': '123',
-                'getresponse': Mock({'read': newjsons
+                'getresponse': Mock({'read': self.newjsons
                 })
             })
         })
@@ -273,6 +259,65 @@ class SpringnoteClientTestCase(unittest.TestCase):
         self.assertEqual( page.title, newpage.title )
         self.assertEqual( page.source, newpage.source )
 
+    def test_delete_page_with_id(self):
+        '''
+        self.id로 delete_page 하면 그 return값은 self.id의 page와 동일해야 함
+        '''
+        newpage = springnote_client.Page.from_jsons(self.newjsons)
+
+        springnote_client.httplib = Mock({
+            'HTTPConnection': Mock({
+                'request': '123',
+                'getresponse': Mock({'read': self.newjsons
+                })
+            })
+        })
+
+        page = self.client.delete_page(id=self.id,domain="loocaworld")
+
+        call = springnote_client.httplib.mockGetNamedCalls("HTTPConnection")[0]
+        self.assertEqual(call.getName(),"HTTPConnection")
+        self.assertEqual(call.getParam(0),"api.springnote.com:80")
+        self.assertTrue( isinstance(page, springnote_client.Page ))
+        self.assertNotEqual( page.identifier, None )
+        self.assertEqual( page.title, newpage.title )
+        self.assertEqual( page.source, newpage.source )
+
+    def test_delete_page_raises_page_not_found_exception_when_calls_twice(self):
+        '''
+        self.id로 delete_page 한 뒤에 get_page 하면 에러를 뿜어내야 함
+        '''
+        newpage = springnote_client.Page.from_jsons(self.newjsons)
+        errorjsons = '''
+            [{"error": {"error_type": "NotFound", "description": "NotFound"}}]
+        '''
+
+        springnote_client.httplib = Mock({
+            'HTTPConnection': Mock({
+                'request': '123',
+                'getresponse': Mock({'read': self.newjsons
+                })
+            })
+        })
+
+        page = self.client.delete_page(id=self.id,domain="loocaworld")
+
+        call = springnote_client.httplib.mockGetNamedCalls("HTTPConnection")[0]
+        self.assertEqual(call.getName(),"HTTPConnection")
+        self.assertEqual(call.getParam(0),"api.springnote.com:80")
+        self.assertTrue( isinstance(page, springnote_client.Page ))
+        self.assertNotEqual( page.identifier, None )
+        self.assertEqual( page.title, newpage.title )
+        self.assertEqual( page.source, newpage.source )
+
+        springnote_client.httplib = Mock({
+            'HTTPConnection': Mock({
+                'request': '123',
+                'getresponse': Mock({'read': errorjsons
+                })
+            })
+        })
+        self.assertRaises(springnote_client.SpringnoteError.PageNotFound, self.client.delete_page,id=self.id,domain="loocaworld")
 
 
 
@@ -346,7 +391,7 @@ class JsonImportExportTestCase(unittest.TestCase):
         #    raise TypeError(repr(obj) + " is not JSON serializable")
         #self.assertEqual(json.dumps(now, default=encode_datetime), '"2007/10/26 05:30:08 +0000"')
         self.assertEqual(json.dumps(now), '"2007/10/26 05:30:08 +0000"')
-        self.assertEqual(json.dumps([1,2,True], default=encode_datetime), '[1, 2, true]')
+        self.assertEqual(json.dumps([1,2,True]), '[1, 2, true]')
 
 
 class ExceptionTestCase(unittest.TestCase):
