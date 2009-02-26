@@ -8,6 +8,10 @@ ID_QUIT = 3
 ID_TEXT = 4
 ID_STATUS = 4
 ID_SAVEAS = 5
+ID_TASK_NEW = 6
+ID_TASK_LIST = 7
+ID_TASK_CONFIG = 8
+ID_TASK_QUIT = 9
 
 class NoteTaskBar(wx.TaskBarIcon):
     def __init__(self):
@@ -16,6 +20,37 @@ class NoteTaskBar(wx.TaskBarIcon):
         icon.SetWidth(25)
         icon.SetHeight(25)
         self.SetIcon(icon,"springmemo")
+        self.initMenu()
+
+    def initMenu(self):
+        self.menu = wx.Menu()
+        task_new = wx.MenuItem(self.menu, ID_TASK_NEW, '새 노트')
+        task_list = wx.MenuItem(self.menu, ID_TASK_LIST, '노트 목록')
+        task_config = wx.MenuItem(self.menu, ID_TASK_CONFIG, '환경 설정')
+        task_quit = wx.MenuItem(self.menu, ID_TASK_QUIT, '종료')
+        self.menu.AppendItem(task_new)
+        self.menu.AppendItem(task_list)
+        self.menu.AppendItem(task_config)
+        self.menu.AppendItem(task_quit)
+        self.Bind(wx.EVT_MENU, self.OnNew, id=ID_TASK_NEW)
+        self.Bind(wx.EVT_MENU, self.OnList, id=ID_TASK_LIST)
+        self.Bind(wx.EVT_MENU, self.OnConfig, id=ID_TASK_CONFIG)
+        self.Bind(wx.EVT_MENU, self.OnQuit, id=ID_TASK_QUIT)
+
+
+        wx.EVT_TASKBAR_RIGHT_UP(self,self.OnTaskBarRight)
+
+    def OnTaskBarRight(self,event):
+        self.PopupMenu(self.menu)
+
+    def OnNew(self,event):
+        print 'new'
+    def OnList(self,event):
+        print 'list'
+    def OnConfig(self,event):
+        print 'config'
+    def OnQuit(self,event):
+        print 'quit'
 
 
 
@@ -160,6 +195,6 @@ class NoteGui(wx.Frame):
 if __name__ == "__main__":
     app = wx.App()
     NoteTaskBar()
-    NoteGui(None,-1,'NoteGUI')
+#    NoteGui(None,-1,'NoteGUI')
     app.MainLoop()
 

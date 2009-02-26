@@ -111,7 +111,9 @@ class TaskBarApp(wx.Frame):
         self.tbicon = MyTaskBarIcon(self)
         self.tbicon.SetIconTimer()
 
+
         self.Show(True)
+        self.Show(False)
 
 ##
 # The main application wx.App class
@@ -121,6 +123,7 @@ class MyApp(wx.App):
         frame = TaskBarApp(None, -1, ' ')
         frame.Center(wx.BOTH)
         frame.Show(False)
+#        frame.Show(True)
         return True
 
 def main(argv=None):
