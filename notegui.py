@@ -1,4 +1,5 @@
-# -*-coding:utf8-*-
+#-*-coding:utf8-*-
+#!/usr/bin/python
 import wx
 import os
 
@@ -195,6 +196,6 @@ class NoteGui(wx.Frame):
 if __name__ == "__main__":
     app = wx.App()
     NoteTaskBar()
-#    NoteGui(None,-1,'NoteGUI')
+    NoteGui(None,-1,'NoteGUI')
     app.MainLoop()
 
