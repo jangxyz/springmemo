@@ -220,6 +220,7 @@ class Page:
     def __init__(self):
         for attr_name in self.attrset:
             setattr(self, attr_name, None)
+        setattr(self,'window',None)             #UI에 대한 핸들 
 
     @staticmethod
     def from_jsons(body):
@@ -312,10 +313,10 @@ def run():
 #    page = client.get_page(id, domain='loocaworld')
     page = client.create_page(title="titleis this7",source="this is body",domain="loocaworld")
 
-    print "----body----"
+#    print "----body----"
 #    print page.source
 #    print result
-    print "------------"
+#    print "------------"
 
     page.title = "EDITED TITLE!!!"
     page.source = "This page is hacked"
