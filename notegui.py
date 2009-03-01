@@ -15,9 +15,9 @@ ID_TASK_CONFIG = 8
 ID_TASK_QUIT = 9
 
 class NoteTaskBar(wx.TaskBarIcon):
-    def __init__(self):
+    def __init__(self,parent):
         wx.TaskBarIcon.__init__(self)
-        icon = wx.Icon('./nicotine.ico', wx.BITMAP_TYPE_ICO,25,25)
+        icon = wx.Icon('./nicotine2.ico', wx.BITMAP_TYPE_ICO,25,25)
         icon.SetWidth(25)
         icon.SetHeight(25)
         self.SetIcon(icon,"springmemo")
@@ -52,6 +52,7 @@ class NoteTaskBar(wx.TaskBarIcon):
         print 'config'
     def OnQuit(self,event):
         print 'quit'
+        exit(1)
 
 
 
@@ -182,7 +183,8 @@ class NoteGui(wx.Frame):
 
         
     def OnQuit(self,event):
-        self.Close()
+#        self.Close()
+        pass
         
     def SetText(self,str):
         self.text.SetValue(str)
