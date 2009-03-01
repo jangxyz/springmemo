@@ -2,13 +2,10 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-from mock import Mock
+from lib.pythonmock.mock import Mock
 import os, sys
+
 import springnote_client
-import lib.json as json
-
-
-from datetime import datetime
 
 class OAuthTestCase(unittest.TestCase):
     def setUp(self):
@@ -51,8 +48,6 @@ class OAuthTestCase(unittest.TestCase):
         })         
         
         self.assertRaises(springnote_client.SpringnoteError.NotAuthorized, self.client.fetch_request_token)
-
-
 
 
     def test_requesting_for_access_token_sends_proper_data(self):
@@ -146,27 +141,27 @@ class SpringnoteClientTestCase(unittest.TestCase):
                 "title": "TestPageedited"
         }}''' % self.id
 
+    def set_httplib_http_connection_mock_with_response_data(self, response_data):
+        springnote_client.httplib = Mock({
+            'HTTPConnection': Mock({
+                'request': '123',
+                'getresponse': Mock({'read': response_data})
+            })
+        })
+
 
     def test_get_page_with_id(self):
-        springnote_client.httplib = Mock({
-            'HTTPConnection': Mock({
-                'request': '123',
-                'getresponse': Mock({'read': self.jsons})
-            })
-        })
+        self.set_httplib_http_connection_mock_with_response_data(self.jsons)
 
         page = self.client.get_page(self.id)
-        self.assertTrue( isinstance(page, springnote_client.Page ))
+        self.assertTrue(isinstance(page, springnote_client.Page))
         self.assertEqual(page.identifier, self.id)
 
+    def test_get_page_should_ask_for_correct_url(self):
+        pass
 
     def test_create_page(self):
-        springnote_client.httplib = Mock({
-            'HTTPConnection': Mock({
-                'request': '123',
-                'getresponse': Mock({'read': self.jsons})
-            })
-        })
+        self.set_httplib_http_connection_mock_with_response_data(self.jsons)
 
         title, body = 'TestPage', 'none source'
         page = self.client.create_page(title=title,source=body,domain="loocaworld")
@@ -183,15 +178,9 @@ class SpringnoteClientTestCase(unittest.TestCase):
 
     def test_create_page_raises_cannot_create_page_exception_when_already_same_title(self):
         returnbody = '{"errors":[{"title": "name", "description": "has already been taken"}]}'
+        self.set_httplib_http_connection_mock_with_response_data(returnbody)
 
-        springnote_client.httplib = Mock({
-            'HTTPConnection': Mock({
-                'request': '123',
-                'getresponse': Mock({'read': returnbody})
-            })
-        })
         title, body = 'TestPage', 'none source'
-
         self.assertRaises(springnote_client.SpringnoteError.CannotCreatePage, \
                           self.client.create_page, title=title,source=body,domain="loocaworld")
 
@@ -205,12 +194,7 @@ class SpringnoteClientTestCase(unittest.TestCase):
                 }
             }]
         '''
-        springnote_client.httplib = Mock({
-            'HTTPConnection': Mock({
-                'request': '123',
-                'getresponse': Mock({'read': returnbody})
-            })
-        })
+        self.set_httplib_http_connection_mock_with_response_data(returnbody)
 
         title, body = 'TestPage', 'none source'
         altclient = springnote_client.SpringnoteClient(self.consumer_token, self.consumer_token_secret)
@@ -226,8 +210,8 @@ class SpringnoteClientTestCase(unittest.TestCase):
         self.assertEqual(newpage.source, "none sourceedited")
         self.assertEqual(newpage.creator, "http://deepblue.myid.net/")
         self.assertEqual(newpage.contributor_modified, "http://deepblue.myid.net/")
-        self.assertEqual(newpage.date_created, datetime.strptime("2007/10/26 05:30:08 +0000","%Y/%m/%d %H:%M:%S +0000"))
-        self.assertEqual(newpage.date_modified, datetime.strptime("2008/01/08 10:55:36 +0000","%Y/%m/%d %H:%M:%S +0000"))
+        self.assertEqual(newpage.date_created, springnote_client.datetime.strptime("2007/10/26 05:30:08 +0000","%Y/%m/%d %H:%M:%S +0000"))
+        self.assertEqual(newpage.date_modified, springnote_client.datetime.strptime("2008/01/08 10:55:36 +0000","%Y/%m/%d %H:%M:%S +0000"))
         self.assertEqual(newpage.relation_is_part_of, 1)
         self.assertEqual(newpage.identifier, self.id)
         self.assertEqual(newpage.tags, ["testedited"])
@@ -237,48 +221,41 @@ class SpringnoteClientTestCase(unittest.TestCase):
 
 
     def test_update_page_with_id(self):
-
+        self.set_httplib_http_connection_mock_with_response_data(self.newjsons)
         newpage = springnote_client.Page.from_jsons(self.newjsons)
-
-        springnote_client.httplib = Mock({
-            'HTTPConnection': Mock({
-                'request': '123',
-                'getresponse': Mock({'read': self.newjsons
-                })
-            })
-        })
-
         title, body = 'TestPage', 'none source'
-        page = self.client.update_page(page=newpage,domain="loocaworld")
 
+        # update page
+        page = self.client.update_page(page=newpage, domain="loocaworld")
+
+        # should call httplib.HTTPConnection
         call = springnote_client.httplib.mockGetNamedCalls("HTTPConnection")[0]
         self.assertEqual(call.getName(),"HTTPConnection")
         self.assertEqual(call.getParam(0),"api.springnote.com:80")
         self.assertTrue( isinstance(page, springnote_client.Page ))
+
+        # XXX: should ???
         self.assertNotEqual( page.identifier, None )
-        self.assertEqual( page.title, newpage.title )
+        self.assertEqual( page.title,  newpage.title )
         self.assertEqual( page.source, newpage.source )
 
     def test_delete_page_with_id(self):
         '''
         self.id로 delete_page 하면 그 return값은 self.id의 page와 동일해야 함
         '''
+        self.set_httplib_http_connection_mock_with_response_data(self.newjsons)
         newpage = springnote_client.Page.from_jsons(self.newjsons)
 
-        springnote_client.httplib = Mock({
-            'HTTPConnection': Mock({
-                'request': '123',
-                'getresponse': Mock({'read': self.newjsons
-                })
-            })
-        })
+        # delete page
+        page = self.client.delete_page(id=self.id, domain="loocaworld")
 
-        page = self.client.delete_page(id=self.id,domain="loocaworld")
-
+        # should call HTTPConnection
         call = springnote_client.httplib.mockGetNamedCalls("HTTPConnection")[0]
         self.assertEqual(call.getName(),"HTTPConnection")
         self.assertEqual(call.getParam(0),"api.springnote.com:80")
         self.assertTrue( isinstance(page, springnote_client.Page ))
+
+        # XXX: should ???
         self.assertNotEqual( page.identifier, None )
         self.assertEqual( page.title, newpage.title )
         self.assertEqual( page.source, newpage.source )
@@ -287,38 +264,17 @@ class SpringnoteClientTestCase(unittest.TestCase):
         '''
         self.id로 delete_page 한 뒤에 get_page 하면 에러를 뿜어내야 함
         '''
+        self.set_httplib_http_connection_mock_with_response_data(self.newjsons)
         newpage = springnote_client.Page.from_jsons(self.newjsons)
+        page = self.client.delete_page(id=self.id,domain="loocaworld")
+
         errorjsons = '''
             [{"error": {"error_type": "NotFound", "description": "NotFound"}}]
         '''
+        self.set_httplib_http_connection_mock_with_response_data(errorjsons)
 
-        springnote_client.httplib = Mock({
-            'HTTPConnection': Mock({
-                'request': '123',
-                'getresponse': Mock({'read': self.newjsons
-                })
-            })
-        })
-
-        page = self.client.delete_page(id=self.id,domain="loocaworld")
-
-        call = springnote_client.httplib.mockGetNamedCalls("HTTPConnection")[0]
-        self.assertEqual(call.getName(),"HTTPConnection")
-        self.assertEqual(call.getParam(0),"api.springnote.com:80")
-        self.assertTrue( isinstance(page, springnote_client.Page ))
-        self.assertNotEqual( page.identifier, None )
-        self.assertEqual( page.title, newpage.title )
-        self.assertEqual( page.source, newpage.source )
-
-        springnote_client.httplib = Mock({
-            'HTTPConnection': Mock({
-                'request': '123',
-                'getresponse': Mock({'read': errorjsons
-                })
-            })
-        })
+        # deleting page twice should rais error
         self.assertRaises(springnote_client.SpringnoteError.PageNotFound, self.client.delete_page,id=self.id,domain="loocaworld")
-
 
 
 class SpringnotePageClassTestCase(unittest.TestCase):
@@ -350,8 +306,8 @@ class SpringnotePageClassTestCase(unittest.TestCase):
         self.assertTrue(isinstance(p, springnote_client.Page))
         self.assertEqual(p.identifier, 4)
         self.assertEqual(p.source, "none source")
-        self.assertTrue(isinstance(p.date_created,        datetime))
-        self.assertTrue(isinstance(p.date_modified,       datetime))
+        self.assertTrue(isinstance(p.date_created,        springnote_client.datetime))
+        self.assertTrue(isinstance(p.date_modified,       springnote_client.datetime))
         self.assertTrue(isinstance(p.identifier,          int))
         self.assertTrue(isinstance(p.relation_is_part_of, int))
 
@@ -362,8 +318,8 @@ class SpringnotePageClassTestCase(unittest.TestCase):
 
         self.assertEqual(p.identifier,4)
         self.assertEqual(p.source,"none source")
-        self.assertEqual(type(p.date_created),datetime)
-        self.assertEqual(type(p.date_modified),datetime)
+        self.assertEqual(type(p.date_created), springnote_client.datetime)
+        self.assertEqual(type(p.date_modified),springnote_client.datetime)
         self.assertEqual(type(p.identifier),int)
         self.assertEqual(type(p.relation_is_part_of),int)
 
@@ -376,22 +332,17 @@ class JsonImportExportTestCase(unittest.TestCase):
 
 
     def test_parse_json_string_into_object(self):
-        self.assertEqual( json.loads(self.s), self.o )
+        self.assertEqual( springnote_client.json.loads(self.s), self.o )
 
 
     def test_parse_object_into_json_string(self):
-        self.assertEqual( json.dumps(self.o), self.s)
+        self.assertEqual( springnote_client.json.dumps(self.o), self.s)
 
 
     def test_parse_datetime_to_json(self):
-        now = datetime.strptime("2007/10/26 05:30:08 +0000","%Y/%m/%d %H:%M:%S +0000")
-        #def encode_datetime(obj):
-        #    if isinstance(obj, datetime):
-        #        return obj.strftime("%Y/%m/%d %H:%M:%S +0000")
-        #    raise TypeError(repr(obj) + " is not JSON serializable")
-        #self.assertEqual(json.dumps(now, default=encode_datetime), '"2007/10/26 05:30:08 +0000"')
-        self.assertEqual(json.dumps(now), '"2007/10/26 05:30:08 +0000"')
-        self.assertEqual(json.dumps([1,2,True]), '[1, 2, true]')
+        now = springnote_client.datetime.strptime("2007/10/26 05:30:08 +0000","%Y/%m/%d %H:%M:%S +0000")
+        self.assertEqual(springnote_client.json.dumps(now), '"2007/10/26 05:30:08 +0000"')
+        self.assertEqual(springnote_client.json.dumps([1,2,True]), '[1, 2, true]')
 
 
 class ExceptionTestCase(unittest.TestCase):
