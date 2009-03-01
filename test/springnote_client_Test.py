@@ -9,14 +9,13 @@ import springnote_client
 
 class OAuthTestCase(unittest.TestCase):
     def setUp(self):
-        self.consumer_token, self.consumer_token_secret = 'some consumer token key', 'some consumer secret'
-        self.client = springnote_client.SpringnoteClient(self.consumer_token, self.consumer_token_secret)
+        self.client = springnote_client.SpringnoteClient()
 
     def test_oauth_consumer_token(self):
         ''' SpringnoteClient should have OAuthConsumer instance consumer,
             that have correct consumer token and consumer token secret '''
-        self.assertEqual(self.client.consumer.key, self.consumer_token)
-        self.assertEqual(self.client.consumer.secret, self.consumer_token_secret)
+        self.assertEqual(self.client.consumer.key, springnote_client.SpringnoteClient.CONSUMER_TOKEN)
+        self.assertEqual(self.client.consumer.secret, springnote_client.SpringnoteClient.CONSUMER_TOKEN_SECRET)
 
     def test_requesting_for_request_token_sends_proper_data(self):
         """ request token을 가져오기 위해 적당한 데이터가 입력되었는지 확인한다 """
@@ -104,8 +103,7 @@ class SpringnoteClientTestCase(unittest.TestCase):
             'HTTPConnection':  connection_mock
         })
         
-        self.consumer_token, self.consumer_token_secret = 'consumer token key', 'consumer secret'
-        self.client = springnote_client.SpringnoteClient(self.consumer_token, self.consumer_token_secret)
+        self.client = springnote_client.SpringnoteClient()
 
         request_token = self.client.fetch_request_token()
         data = self.client.fetch_access_token(request_token)
@@ -197,7 +195,7 @@ class SpringnoteClientTestCase(unittest.TestCase):
         self.set_httplib_http_connection_mock_with_response_data(returnbody)
 
         title, body = 'TestPage', 'none source'
-        altclient = springnote_client.SpringnoteClient(self.consumer_token, self.consumer_token_secret)
+        altclient = springnote_client.SpringnoteClient()
         altclient.set_access_token_directly("wrong key","wrong secret")
 
         self.assertRaises(springnote_client.SpringnoteError.InvalidOauthRequest, altclient.create_page,title=title,source=body,domain="loocaworld")

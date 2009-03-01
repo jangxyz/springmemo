@@ -15,7 +15,7 @@ ID_TASK_CONFIG = 8
 ID_TASK_QUIT = 9
 
 class NoteTaskBar(wx.TaskBarIcon):
-    def __init__(self,parent):
+    def __init__(self,controller=None):
         wx.TaskBarIcon.__init__(self)
         icon = wx.Icon('./nicotine2.ico', wx.BITMAP_TYPE_ICO,25,25)
         icon.SetWidth(25)
@@ -42,6 +42,7 @@ class NoteTaskBar(wx.TaskBarIcon):
         wx.EVT_TASKBAR_RIGHT_UP(self,self.OnTaskBarRight)
 
     def OnTaskBarRight(self,event):
+        print event
         self.PopupMenu(self.menu)
 
     def OnNew(self,event):
@@ -49,11 +50,11 @@ class NoteTaskBar(wx.TaskBarIcon):
     def OnList(self,event):
         print 'list'
     def OnConfig(self,event):
+        print event
         print 'config'
     def OnQuit(self,event):
         print 'quit'
         exit(1)
-
 
 
 
@@ -198,6 +199,6 @@ class NoteGui(wx.Frame):
 if __name__ == "__main__":
     app = wx.App()
     NoteTaskBar()
-    NoteGui(None,-1,'NoteGUI')
+#    NoteGui(None,-1,'NoteGUI')
     app.MainLoop()
 
