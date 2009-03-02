@@ -22,6 +22,7 @@ class NoteTaskBar(wx.TaskBarIcon):
         icon.SetHeight(25)
         self.SetIcon(icon,"springmemo")
         self.initMenu()
+        print "controller::%s"%controller
 
     def initMenu(self):
         self.menu = wx.Menu()
@@ -173,13 +174,8 @@ class NoteGui(wx.Frame):
         
     
     def SaveFile(self,path):
-#        if(os.path.exists(path)):
-#            ret = wx.MessageBox('덮어 쓰시겠습니까?','SpringMemo',wx.YES_NO|wx.CENTRE|wx.NO_DEFAULT,self,100,100)
-#            if(ret == wx.NO):
-#                return
         file = open(path,"w+")
         file.write(self.GetText())
-#        self.text.SaveFile(path)
         return True
 
         
