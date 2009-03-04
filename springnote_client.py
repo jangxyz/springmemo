@@ -59,6 +59,14 @@ class SpringnoteClient:
         self.access_token = oauth.OAuthToken(key,secret)
         return self.access_token
 
+
+    def get_root_page(self):
+        '''tag 에 springmemorootpage 라고 써있는 글을 찾는다 '''
+        '''없으면 새 페이지를 만들고 리턴 '''
+        self.get_page_with_tag('springmemorootpage')
+        pass
+
+
     # todo
     def get_page(self, id, domain=None):
         url = "%s://%s/pages/%d.json" % (self.SPRINGNOTE_PROTOCOL, self.SPRINGNOTE_SERVER, id)
@@ -74,6 +82,31 @@ class SpringnoteClient:
         connection.request('GET', url, headers=oauth_request.to_header())
         response = connection.getresponse()
         body = response.read()
+    
+        print "body::::::: %s" % body
+        return Page.from_jsons(body)
+
+    def get_page_with_tag(self,tag,domain=None):
+#        url = "%s://%s/pages.json?tags=%s" % (self.SPRINGNOTE_PROTOCOL, self.SPRINGNOTE_SERVER, tag)
+        url = "%s://%s/pages.json" % (self.SPRINGNOTE_PROTOCOL, self.SPRINGNOTE_SERVER)
+        parameters = {}
+#        if domain:
+#            parameters['domain'] = domain
+#            url += "?domain=%s" % domain
+        
+        url += "?tags=%s" % tag
+        print "url::%s"%url
+        oauth_request = oauth.OAuthRequest.from_consumer_and_token(self.consumer, token=self.access_token, http_method='GET', http_url=url, parameters=parameters)
+        oauth_request.sign_request(self.signature_method, self.consumer, self.access_token)        
+
+        connection = httplib.HTTPConnection("%s:%d" % (self.SPRINGNOTE_SERVER, self.SPRINGNOTE_PORT))
+
+        connection.request('GET', url, headers=oauth_request.to_header())
+        response = connection.getresponse()
+        body = response.read()
+        print "----------"
+        print body
+        print "----------"
 
         return Page.from_jsons(body)
 
@@ -83,13 +116,15 @@ class SpringnoteClient:
         
 
     # TODO: DRY!
-    def create_page(self,title,source=None,domain=None):
+    def create_page(self,title,source=None,domain=None,tags=None):
         url = "%s://%s/pages.json" % (self.SPRINGNOTE_PROTOCOL, self.SPRINGNOTE_SERVER)
 #        url = "%s://%s/pages.xml" % (self.SPRINGNOTE_PROTOCOL, self.SPRINGNOTE_SERVER)
         parameters = {}
         newpage = Page()
         newpage.title = title
         newpage.source = source
+        if tags:
+            newpage.tags.append(tags)
 
         if domain:
             parameters['domain'] = domain
@@ -189,6 +224,7 @@ class SpringnoteError:
     class InvalidOauthRequest(RuntimeError): pass
     class PageNotFound(RuntimeError): pass
 
+
 class Page:
     typeset = {
         'identifier': int,
@@ -232,9 +268,7 @@ class Page:
         return result
 
 
-    # FIXME: self.__dict__ 대신 attrset 써서 구현해주세요
     def to_write_json(self):
-#        return json.dumps({'page':self.__dict__})
         result = {}
         for attr_name in self.attrset:
             result[attr_name] = getattr(self,attr_name)
@@ -259,3 +293,65 @@ class Page:
                 self.creator, self.contributor_modified)
 
 
+
+class Model:
+    def __init__(self,memo):
+        self.page = None
+        self.memo = memo
+        self.client = memo.controller.client
+
+    @staticmethod
+    def create_new_model(memo,type,title):
+        model = Model(memo)
+        model.page = model.client.create_page(title)
+        return model
+
+    @staticmethod
+    def get_root_model(memo):
+        model = Model(memo)
+        model.page = model.client.get_root_page()
+
+
+
+
+
+
+
+
+def run():
+    token = "wpRiJvvQy624FayfQ6Q"
+    token_secret = "GHY2La7yR2moQUXO2ETiuuiAtqFCCa37bO6uAXC6Yw"
+    id = 2827114
+    access_key = "FHksYUxDz5sNpxXZ3Yq9Qg"
+    access_secret = "5ILhwSbmQCFBL4A8orCBna8zwLAbC2iIRPxRfRZgQls"
+
+    client = SpringnoteClient()
+#    request_token = client.fetch_request_token()
+    
+#    print client.authorize_url(request_token)
+#    raw_input("please Enter...")
+
+#    access_token = client.fetch_access_token(request_token)
+    access_token = client.set_access_token_directly(access_key,access_secret)
+    print access_token.key, access_token.secret
+
+#    page = client.get_page(id, domain='loocaworld')
+    page = client.get_page_with_tag("aaa",domain='loocaworld')
+#    page = client.create_page(title="titleis this7",source="this is body",domain="loocaworld")
+
+    print "----body----"
+    print page.source
+#    print result
+    print "------------"
+
+#    page.title = "EDITED TITLE!!!"
+#    page.source = "This page is hacked"
+#    newpage = client.update_page(page,domain='loocaworld')
+
+
+#    result = client.delete_page(page.identifier,domain='loocaworld')
+    
+
+
+if __name__ == "__main__":
+    run()

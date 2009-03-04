@@ -155,6 +155,13 @@ class SpringnoteClientTestCase(unittest.TestCase):
         self.assertTrue(isinstance(page, springnote_client.Page))
         self.assertEqual(page.identifier, self.id)
 
+
+    def test_get_page_with_tag(self):
+        tag = "sometag"
+        page = self.client.get_page_with_tag(tag)
+        self.assertTrue(isinstance(page,springnote_client.Page))
+        self.assertTrue(tag in page.tags)
+
     def test_get_page_should_ask_for_correct_url(self):
         pass
 
