@@ -110,6 +110,7 @@ class SpringnoteClientTestCase(unittest.TestCase):
         self.access_token = data
 
         self.id = 2775538
+        self.tag = "sometag"
         self.jsons = '''
             {"page": {
                 "rights": null,
@@ -139,6 +140,27 @@ class SpringnoteClientTestCase(unittest.TestCase):
                 "title": "TestPageedited"
         }}''' % self.id
 
+        self.jsons_with_tag = '''
+        {"page": {
+                "rights": null,
+                "source": "none sourceedited",
+                "creator": "http://deepblue.myid.net/",
+                "date_created": "2007/10/26 05:30:08 +0000",
+                "contributor_modified": "http://deepblue.myid.net/",
+                "date_modified": "2008/01/08 10:55:36 +0000",
+                "relation_is_part_of": 1,
+                "identifier": %d,
+                "tags": "sometag",
+                "title": "TestPageedited"
+        }}''' % self.id
+
+        self.jsons_cannot_find_tag = '''[]'''
+        self.no_response_http_connection_mock = Mock({
+            'request': None,
+            'getresponse': Mock({'read': '[]'})
+        }) 
+
+
     def set_httplib_http_connection_mock_with_response_data(self, response_data):
         springnote_client.httplib = Mock({
             'HTTPConnection': Mock({
@@ -155,12 +177,17 @@ class SpringnoteClientTestCase(unittest.TestCase):
         self.assertTrue(isinstance(page, springnote_client.Page))
         self.assertEqual(page.identifier, self.id)
 
+    def test_get_page_sends_proper_request(self):
+        springnote_client.httplib = Mock({
+            'HTTPConnection': self.no_response_http_connection_mock
+        })
 
-    def test_get_page_with_tag(self):
-        tag = "sometag"
-        page = self.client.get_page_with_tag(tag)
-        self.assertTrue(isinstance(page,springnote_client.Page))
-        self.assertTrue(tag in page.tags)
+        self.client.get_page(self.id)
+        request = self.no_response_http_connection_mock.mockGetNamedCalls('request')[0]
+        self.assertEqual(request.getParam(0), 'GET')
+        self.assertTrue("pages/%d.json" % self.id in request.getParam(1))
+
+
 
     def test_get_page_should_ask_for_correct_url(self):
         pass
@@ -186,7 +213,7 @@ class SpringnoteClientTestCase(unittest.TestCase):
         self.set_httplib_http_connection_mock_with_response_data(returnbody)
 
         title, body = 'TestPage', 'none source'
-        self.assertRaises(springnote_client.SpringnoteError.CannotCreatePage, \
+        self.assertRaises(springnote_client.SpringnoteError.HasAlreadyBeenTaken, \
                           self.client.create_page, title=title,source=body,domain="loocaworld")
 
 
@@ -278,8 +305,43 @@ class SpringnoteClientTestCase(unittest.TestCase):
         '''
         self.set_httplib_http_connection_mock_with_response_data(errorjsons)
 
-        # deleting page twice should rais error
+        # deleting page twice should raise error
         self.assertRaises(springnote_client.SpringnoteError.PageNotFound, self.client.delete_page,id=self.id,domain="loocaworld")
+
+
+    def test_get_page_with_tag_parses_response_correctly(self):
+        ''' tags에 내가 전송한 tag정보가 있는 page가 생성된다  '''
+        self.set_httplib_http_connection_mock_with_response_data(self.jsons_with_tag)
+        page = self.client.get_page_with_tag(self.tag)
+
+        self.assertTrue(isinstance(page,springnote_client.Page))
+        self.assertTrue(self.tag in page.tags)
+
+    def test_get_page_with_tag_sends_proper_request(self):
+        springnote_client.httplib = Mock({
+            'HTTPConnection': self.no_response_http_connection_mock
+        })
+
+        self.client.get_page_with_tag(self.tag)
+        request = self.no_response_http_connection_mock.mockGetNamedCalls('request')[0]
+        self.assertEqual(request.getParam(0), 'GET')
+        self.assertTrue(request.getParam(1).endswith("tags=%s" % self.tag))
+
+
+    def test_get_page_with_tag_returns_none_when_there_is_no_page_with_that_tag(self):
+        ''' 태그를 가진 page가 없을 경우 None을 리턴한다 '''
+        self.set_httplib_http_connection_mock_with_response_data(self.jsons_cannot_find_tag)
+        page = self.client.get_page_with_tag(self.tag)
+        #
+        self.assertEqual(page,None)
+
+    def test_get_root_page_returns_a_page_with_tag(self):
+        self.set_httplib_http_connection_mock_with_response_data(self.jsons_with_tag)
+
+        page = self.client.get_root_page()
+        self.assertTrue(isinstance(page,springnote_client.Page))
+        self.assertTrue(self.tag in page.tags)
+
 
 
 class SpringnotePageClassTestCase(unittest.TestCase):
