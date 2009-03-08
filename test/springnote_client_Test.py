@@ -154,6 +154,18 @@ class SpringnoteClientTestCase(unittest.TestCase):
                 "title": "TestPageedited"
         }}''' % self.id
 
+        self.jsons_sub_pages = '''
+        [
+            {"page": 
+                {"identifier": 2449602, "title": "1\uc8fc\ucc28) \uc6f9 \ud504\ub808\uc784\uc6cc\ud06c \uc640 RoR", "relation_is_part_of": %s, "uri": "http://loocaworld.springnote.com/pages/2449602", "date_modified": "2009/01/07 08:55:59 +0000"}}, 
+            {"page": 
+                {"identifier": 2507422, "title": "2\uc8fc\ucc28) Ruby \uc5b8\uc5b4 AtoZ", "relation_is_part_of": %s, "uri": "http://loocaworld.springnote.com/pages/2507422", "date_modified": "2009/01/14 08:59:39 +0000"}}, 
+            {"page": 
+                {"identifier": 2552612, "title": "3\uc8fc\ucc28) RoR\uc744 \uc774\uc6a9\ud55c \uac04\ub2e8\ud55c \uc5b4\ud50c\ub9ac\ucf00\uc774\uc158", "relation_is_part_of": %s, "uri": "http://loocaworld.springnote.com/pages/2552612", "date_modified": "2009/01/21 08:31:27 +0000"}}, 
+            {"page": 
+                {"identifier": 2586456, "title": "4\uc8fc\ucc28) \uac8c\uc2dc\ud310 \ub9cc\ub4e4\uae30", "relation_is_part_of": %s, "uri": "http://loocaworld.springnote.com/pages/2586456", "date_modified": "2009/01/28 06:37:14 +0000"}}
+        ]''' % (self.id,self.id,self.id,self.id)
+
         self.jsons_cannot_find_tag = '''[]'''
         self.no_response_http_connection_mock = Mock({
             'request': None,
@@ -176,6 +188,15 @@ class SpringnoteClientTestCase(unittest.TestCase):
         page = self.client.get_page(self.id)
         self.assertTrue(isinstance(page, springnote_client.Page))
         self.assertEqual(page.identifier, self.id)
+
+    def test1_get_pages_with_parent_id(self):
+        self.set_httplib_http_connection_mock_with_response_data(self.jsons_sub_pages)
+
+        pages = self.client.get_pages_with_parent_id(self.id)
+        for page in pages:
+            self.assertTrue(isinstance(page,springnote_client.Page))
+            self.assertEqual(page.relation_is_part_of,self.id)
+    
 
     def test_get_page_sends_proper_request(self):
         springnote_client.httplib = Mock({
@@ -423,7 +444,7 @@ class ExceptionTestCase(unittest.TestCase):
 if __name__ == '__main__':
     #unittest.main(defaultTest=suite())
     loader = unittest.defaultTestLoader
-    loader.testMethodPrefix = 'test'
+    loader.testMethodPrefix = 'test1'
     unittest.main(testLoader = loader)
 
 

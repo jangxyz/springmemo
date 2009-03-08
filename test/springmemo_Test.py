@@ -7,11 +7,12 @@ import os, sys
 
 import springmemo
 import springnote_client
+import notegui
 
 
 class SpringMemoCase(unittest.TestCase):
     def setUp(self):
-        app = springmemo.wx.App()
+        self.app = springmemo.wx.App()
         self.mainapp = springmemo.SpringMemo()
         self.mainapp.user_authorize()
 
@@ -46,6 +47,22 @@ class SpringMemoCase(unittest.TestCase):
         ''' % self.id
 
 
+        self.jsons_root_page = '''
+            {"page": {
+                "rights": null,
+                "source": "none source",
+                "creator": "http://deepblue.myid.net/",
+                "date_created": "2007/10/26 05:30:08 +0000",
+                "contributor_modified": "http://deepblue.myid.net/",
+                "date_modified": "2008/01/08 10:55:36 +0000",
+                "relation_is_part_of": 1,
+                "identifier": %d,
+                "tags": %s,
+                "title": %s
+            }}
+        ''' % (self.id,springnote_client.SpringnoteClient.DEFAULT_ROOT_TAG,springnote_client.SpringnoteClient.DEFAULT_ROOT_TITLE)
+
+
 
 
     def set_httplib_http_connection_mock_with_response_data(self,response_data):
@@ -61,7 +78,7 @@ class SpringMemoCase(unittest.TestCase):
         self.assertTrue(isinstance(self.mainapp,springmemo.SpringMemo))
         self.assertEqual(type(self.mainapp.memos),type([]))
     
-    def test1_creating_a_new_memo_instance(self):
+    def test_creating_a_new_memo_instance(self):
         ''' 새 메모가 생성되고 springmemo.memos list에 push된다 '''
         ''' memo.page와 memo.view가 정상적이다 '''
         self.set_httplib_http_connection_mock_with_response_data(self.jsons)
@@ -73,12 +90,42 @@ class SpringMemoCase(unittest.TestCase):
         self.assertTrue(isinstance(memo, springmemo.Memo))
         self.assertEqual(self.mainapp.memos[0], memo)
         self.assertEqual(title, memo.page.title)
-#        self.assertTrue(isinstance(memo.view,notegui.Note))
+        self.assertTrue(isinstance(memo.view,notegui.NormalNote))
 
     def test_user_authorize_set_page_client(self):
         ''' 인증 초기에 Page.client이 적절히 들어온다 '''
         self.assertTrue(isinstance(springnote_client.Page.client,springnote_client.SpringnoteClient))
 
+#    def test_initializing_all_memos(self):
+#        self.mainapp.init_all_memos()
+#        self.assertTrue(isinstance(self.mainapp.rootmemo,springmemo.Memo))
+
+    def test_get_root_memo_parses_jsons_correctly(self):
+        pass
+
+
+### Memo ###
+
+class MemoCase(unittest.TestCase):
+    def setUp(self):
+        self.app = springmemo.wx.App()
+        self.mainapp = springmemo.SpringMemo()
+        self.mainapp.user_authorize()
+
+#        self.set_default_mock()
+
+    def test_get_root_memo_returns_correct_root_memo(self):
+        rootmemo = springmemo.Memo.get_root_memo()
+        print "title:%s" % rootmemo.page.title
+        print "tags:%s" % rootmemo.page.tags
+        self.assertTrue(isinstance(rootmemo,springmemo.Memo))
+        self.assertTrue(isinstance(rootmemo.page,springnote_client.Page))
+#        self.assertEqual(rootmemo.page.tags,springnote_client.SpringnoteClient.DEFAULT_ROOT_TAG)
+        self.assertEqual(rootmemo.page.title,springnote_client.SpringnoteClient.DEFAULT_ROOT_TITLE)
+
+
+
+### Run ###
 
 if __name__ == "__main__":
     loader = unittest.defaultTestLoader

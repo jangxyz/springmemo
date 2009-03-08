@@ -23,9 +23,9 @@ class NoteGUITestCase(unittest.TestCase):
 #            self.assertTrue(item.GetLabel() in self.menuNameSet)
 
 
-    def test_menu_new(self):
+    def test1_menu_new(self):
         """태스크바의 new 메뉴가 정상적으로 작동함"""
-        """"""
+        """new 메뉴가 정상적으로 dialog를 호출하고 ID_OK까지 정상작동함"""
         menu_new = None
         for item in self.taskbar.menu.GetMenuItems():
             if item.GetLabel() == unicode("새 노트",'utf-8'):
@@ -35,6 +35,8 @@ class NoteGUITestCase(unittest.TestCase):
         self.assertTrue(menu_new)
         event = notegui.wx.CommandEvent(notegui.wx.wxEVT_COMMAND_BUTTON_CLICKED,menu_new.GetId())
         self.taskbar.menu.GetEventHandler().ProcessEvent(event)
+        print "select_note : %s" % self.taskbar.select_note
+        self.assertTrue(isinstance(self.taskbar.select_note,notegui.SelectNoteDlg))
 
 ### 이벤트가 완료된 상황에서 뭔가 처리해줘야 함 
 
@@ -49,7 +51,7 @@ class NoteGUITestCase(unittest.TestCase):
         event = noteguit.wx.CommandEvent(notegui.wx.wxEVT_COMMAND_BUTTON_CLICKED,menu_list.GetId())
         self.taskbar.menu.GetEventHandler().ProcessEvent(event)
 
-    def test1_menu_config(self):
+    def test_menu_config(self):
         menu_config = None
         for item in self.taskbar.menu.GetMenuItems():
             if item.GetLabel() == unicode("환경 설정",'utf-8'):
@@ -65,8 +67,8 @@ class NoteGUITestCase(unittest.TestCase):
 
         #event = wx.CommandEvent(wx.EVT_MENU, menu_config.GetId())
 #        self.taskbar.PopupMenu(self.taskbar.menu)
-        event = notegui.wx.CommandEvent(notegui.wx.wxEVT_TASKBAR_CLICK, menu_config.GetId())
-        print self.taskbar.menu.GetEventHandler().ProcessEvent(event)
+#        event = notegui.wx.CommandEvent(notegui.wx.wxEVT_TASKBAR_CLICK, menu_config.GetId())
+#        print self.taskbar.menu.GetEventHandler().ProcessEvent(event)
         #self.assertRaises(TestException, self.taskbar.menu.GetEventHandler().ProcessEvent, event)
 
     def test_menu_quit(self):
