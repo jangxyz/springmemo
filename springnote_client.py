@@ -18,6 +18,7 @@ class SpringnoteClient:
     AUTHORIZATION_URL = 'https://api.springnote.com/oauth/authorize'
 
     DEFAULT_ROOT_TAG = 'springmemorootpage'
+#    DEFAULT_ROOT_TITLE = unicode('SpringMemo 최상위 페이지입니다','utf-8')
     DEFAULT_ROOT_TITLE = 'SpringMemo 최상위 페이지입니다'
    
     def print_client(self):
@@ -157,6 +158,7 @@ class SpringnoteClient:
         # response
         response = connection.getresponse()
         body = response.read()
+#        print body
         page = self.handle_response(body)
 
         return page
@@ -283,7 +285,7 @@ class Page:
     def __init__(self):
         for attr_name in self.attrset:
             setattr(self, attr_name, None)
-        setattr(self,'view',None)             #UI에 대한 핸들 
+#        setattr(self,'view',None)             #UI에 대한 핸들 
 
     @staticmethod
     def from_jsons(body):
@@ -300,10 +302,10 @@ class Page:
         Page.client = client
 
     @staticmethod
-    def create_new_page(title,rel):
+    def create_new_page(title,rel=None,source=None,tags=None,domain=None):
         ''' 새 page 인스턴스를 생성한다  '''
         if title != None:
-            page = Page.client.create_page(title=title,source="",rel=rel)
+            page = Page.client.create_page(title=title,source=source,rel=rel)
         return page
 
     @staticmethod
@@ -385,11 +387,39 @@ class Page:
             setattr(self, key, value)
         return data
         
+    def save_page(self,title=None,source=None,tags=None,rel=None):
+        ''' 주어진 소스를 이용해 현재 페이지에 저장, 업데이트 '''
+        if source:
+            self.source = source
+        if title:
+            self.title = title
+        if tags:
+            self.tags = tags
+        if rel:
+            self.relation_is_part_of = rel
 
-    def to_s(self):
-        return "%s %s %s %s %s %s" % (self.identifier,self.date_created,
-                self.date_modified, self.rights,
-                self.creator, self.contributor_modified)
+        self.update_page()
+
+
+    def update_page(self):
+        ''' Page.client를 이용해 자신의 데이터를 저장한다. '''
+        newpage = Page.client.update_page(self)
+        self.update_self_with_page(newpage)
+
+    def update_self_with_page(self, page):
+        ''' page의 attr들로 자기자신의 데이터를 교체한다 '''
+        for attr_name in Page.attrset:
+            if hasattr(page, attr_name):
+                setattr(self, attr_name, getattr(page, attr_name))
+
+
+
+
+
+#    def to_s(self):
+#        return "%s %s %s %s %s %s" % (self.identifier,self.date_created,
+#                self.date_modified, self.rights,
+#                self.creator, self.contributor_modified)
 
 
 
@@ -415,15 +445,17 @@ def run():
 #    page = client.create_page(title="titleis this9",source="",rel=None)
 
 #    pages = client.get_pages_with_parent_id(2449362)
+    page = client.get_page(2586456)
     print "----body----"
 #    print "pages : %s" % pages
-#    print page.source
+    print page.source
 #    print result
     print "------------"
 
     mybody = '<div id=\"header\" style=\"display:none;\">this is sexy header</div><p>title</p><p>bon moon</p>'
 #    page = client.create_page(title="mytest",source=mybody)
-    page = client.create_page(title="mytest3",source='<div>gggggg</div>')
+#    page = client.create_page(title="mytest3",source='<div>gggggg</div>')
+
 #    page.title = "EDITED TITLE!!!"
 #    page.source = "This page is hacked"
 #    newpage = client.update_page(page,domain='loocaworld')

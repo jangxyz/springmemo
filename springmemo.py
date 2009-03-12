@@ -4,6 +4,7 @@ import os
 import springnote_client
 import notegui
 import wx
+import re
 
 MEMO_TYPE_NORMAL = 1
 MEMO_TYPE_TODO = 2
@@ -61,42 +62,76 @@ class SpringMemo:
         pages = springnote_client.Page.get_all_pages(self.rootmemo)
 
         for page in pages:
-            memo = None
-            memo = Memo.from_page(page,MEMO_TYPE_NORMAL)
-            if memo != None:
-                self.memos.append(memo)
+            memo = Memo.from_page(page)
+#            if memo != None:
+#                self.memos.append(memo)
+            self.memos.append(memo)
 
 
 class Memo:
-    def __init__(self, type=None, title=None, rel=None):
-        ''' writer생성 후 연결(writer내에서 자동으로 createpage..) '''
-        self.view = None
-        self.page = None
-        self.type = type
+    def __init__(self, view=None, page=None, header=None):
+        self.view = view
+        self.page = page
+#        self.type = type       ?? 필요한가 ??
+        self.header = header
 
-        if title != None:
-            self.page = springnote_client.Page.create_new_page(title,rel)
-    
-        if type != None:
-            self.view = self.get_view(type=type,title=title)
+    @staticmethod
+    def create(type=None,title=None,rel=None,tags=None):
+        ''' 완전히 새로 만드는 부분 '''
+        memo = Memo()
+
+        memo.view = memo.get_view(type=type,title=title)
+        memo.header = PageHeader(type=type)
+        default_source = memo.get_save_source()
+
+        memo.page = springnote_client.Page.create_new_page(title,rel=rel,source=default_source,tags=tags) #domain?? skip!
+
+    def save_memo(self):
+        ''' 현재 memo를 저장한다 
+            self.get_save_source()를 이용해 데이터를 받아서 Page객체를 설정,
+            (page.source에 저장,)
+            Page에서 저장하는 방식.. 
+        '''
+        source = self.get_save_source()
+        print "source :: %s" % source
+
+        self.page.save_page(source=source)
+
+    def close_memo(self):
+        self.header.is_open = False
+        self.save_memo()
 
 
-    def get_view(self,type,parent=None,id=-1,title=""):
+    def get_save_source(self,view=None,header=None):
+        ''' self.view의 데이터를 시리얼라이즈 하여(self.view.serialize?)
+            self.header.make_source_from_header() 와 합쳐서 업로드
+            page와 header가 있으면 그걸로, 없으면 self.으로..
+        '''
+        if view == None:
+            view = self.view
+        if header == None:
+            header = self.header
+        source = view.SerializeBody()
+        source += header.make_source_from_header()
+        return source
+
+    @staticmethod
+    def from_page(page):
+        ''' page정보로 Memo 생성
+         page의 header로, On상태일때 view를 Show해줌
+        '''
+        header = PageHeader.parse_header_from_source(page.source)
+        memo = Memo(page=page,header=header)
+        if header.is_open == True:
+            print "open open"
+            memo.view = memo.get_view(header.type,page.title)
+        return memo
+
+
+    def get_view(self,type,title,is_open=True,parent=None,id=-1):
         if type == MEMO_TYPE_NORMAL:
             view = notegui.NormalNote(parent,id,title,self)
         return view
-
-
-    @staticmethod
-    def from_page(page,type):
-        ''' page정보로 Memo 생성'''
-        ''' page의 header로, On상태일때 view를 Show해줌 '''
-        '''  '''
-
-        memo = Memo()
-        memo.page = page
-        memo.view = memo.get_view(type=type)
-        return memo
 
 
     @staticmethod
@@ -104,6 +139,51 @@ class Memo:
         memo = Memo()
         memo.page = springnote_client.Page.get_root_page()
         return memo
+
+
+
+class PageHeader:
+    re_find_header = re.compile("<div[^>]*?id=\"page_header\"[^>]*?>(.*?)</div>",re.M|re.I|re.U|re.S)
+    re_get_all_attrs = re.compile("<p[^>]*?id=\"(.*?)\"[^>]*?>(.*?)</p>",re.M|re.I|re.U|re.S)
+    typeset = {
+            'is_open': lambda x: (x == "False" and False)\
+                    or (x == "True" and True),
+            'type': int
+            }
+    attrset = ['is_open','type']
+
+    def __init__(self,type=None,is_open=True):
+#        self.is_open = None
+#        for attr_name in PageHeader.attrset:
+#            setattr(self, attr_name, None)
+        if type:
+            self.type = type
+        if is_open:
+            self.is_open = True
+
+    def make_source_from_header(self):
+        source = ""
+        for attr_name in PageHeader.attrset:
+            source += "<p id=\"%s\">%s</p>"% (attr_name,getattr(self,attr_name))
+
+        source = "<div id=\"page_header\" style=\"display:none;\">%s</div>" % source
+
+        return source
+
+
+
+
+    @staticmethod
+    def parse_header_from_source(source):
+        ph = PageHeader()
+        header_text = PageHeader.re_find_header.findall(source)
+        attrs = PageHeader.re_get_all_attrs.findall(header_text[0])
+        print attrs
+
+        for attrset in attrs:
+            setattr(ph,attrset[0],PageHeader.typeset[attrset[0]](attrset[1]))
+
+        return ph
 
 
 #### Run() Method ####
@@ -120,8 +200,28 @@ def run():
 
     app.MainLoop()
 
+def run2():
+    is_open = True
+    source = '''
+<div id="body">
+this is real body.<br />
+and this is a text.<br />
+</div>
+Here is a HIDDEN header for 
+<div id="page_header"><p id="is_open">%s</p><p id="type">1</p></div>
+SpringMemo! Don't delete this line PLEASE :)
+        ''' % (str(is_open))
+
+    header = PageHeader.parse_header_from_source(source)
+
+
+
 
 #### for Main ####
 
 if __name__=="__main__":
     run()
+#    run2()
+
+
+

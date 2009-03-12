@@ -121,8 +121,43 @@ class MemoCase(unittest.TestCase):
         self.assertTrue(isinstance(rootmemo,springmemo.Memo))
         self.assertTrue(isinstance(rootmemo.page,springnote_client.Page))
 #        self.assertEqual(rootmemo.page.tags,springnote_client.SpringnoteClient.DEFAULT_ROOT_TAG)
-        self.assertEqual(rootmemo.page.title,springnote_client.SpringnoteClient.DEFAULT_ROOT_TITLE)
+#        self.assertEqual(rootmemo.page.title,springnote_client.SpringnoteClient.DEFAULT_ROOT_TITLE)
+        self.assertEqual(unicode(rootmemo.page.title,'utf-8'),unicode(springnote_client.SpringnoteClient.DEFAULT_ROOT_TITLE,'utf-8'))
 
+
+class PageHeader(unittest.TestCase):
+    def setUp(self):
+        self.is_open = True
+        self.type = springmemo.MEMO_TYPE_NORMAL
+        self.source = '''
+<div id="body">
+this is real body.<br />
+and this is a text.<br />
+</div>
+Here is a HIDDEN header for 
+<div id="page_header"><p id="is_open">%s</p><p id="type">%d</p></div>
+SpringMemo! Don't delete this line PLEASE :)
+        ''' % (str(self.is_open),self.type)
+
+    def test_parsing_header_from_source(self):
+        header = springmemo.PageHeader.parse_header_from_source(self.source)
+
+        self.assertEqual(header.is_open,self.is_open)
+        self.assertEqual(header.type,self.type)
+        self.assertTrue(isinstance(header.type,int))
+
+    def test1_making_source_from_header(self):
+        header = springmemo.PageHeader()
+        header.is_open = True
+        header.type = 1
+        header_str = "<div id=\"page_header\" style=\"display:none;\"><p id=\"is_open\">%s</p><p id=\"type\">%s</p></div>" % (header.is_open, header.type)
+
+        result_str = header.make_source_from_header()
+        header2 = springmemo.PageHeader.parse_header_from_source(result_str)
+
+        self.assertEqual(header_str,result_str)
+        self.assertEqual(header2.is_open,header.is_open)
+        self.assertEqual(header2.type,header.type)
 
 
 ### Run ###

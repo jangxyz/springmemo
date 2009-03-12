@@ -3,9 +3,11 @@
 
 import unittest
 import notegui
+from lib.pythonmock.mock import Mock
+
 #import wx
 
-class NoteGUITestCase(unittest.TestCase):
+class NoteTaskBarTestCase(unittest.TestCase):
     def setUp(self):
         self.app = notegui.wx.App()
         self.taskbar = notegui.NoteTaskBar()
@@ -23,7 +25,7 @@ class NoteGUITestCase(unittest.TestCase):
 #            self.assertTrue(item.GetLabel() in self.menuNameSet)
 
 
-    def test1_menu_new(self):
+    def test_menu_new(self):
         """태스크바의 new 메뉴가 정상적으로 작동함"""
         """new 메뉴가 정상적으로 dialog를 호출하고 ID_OK까지 정상작동함"""
         menu_new = None
@@ -97,8 +99,32 @@ class NoteGuiTestCase(unittest.TestCase):
     def test_timer(self):
         timer_event = None
         self.note.GetEventHandler().ProcessEvent(timer_event)
-
         pass
+
+class NormalNoteTestCase(unittest.TestCase):
+    def setUp(self):
+        self.app = notegui.wx.App()
+        self.body = '''
+            this is real body.<br />
+            and this is a text.<br />
+        '''
+        self.source = '''
+<div id="body">%s</div>
+Here is a HIDDEN header for 
+<div id="page_header"><p id="is_open">True</p><p id="type">1</p></div>
+SpringMemo! Don't delete this line PLEASE :)
+        ''' % self.body
+
+    def test1_parses_data_from_source_well(self):
+        page_mock = Mock()
+        page_mock.source = self.source
+        memo_mock = Mock()
+        memo_mock.page = page_mock
+
+        normalnote = notegui.NormalNote(None,-1,"title",memo_mock)
+        self.assertEqual(normalnote.body,self.body)
+
+
 
 
 if __name__ == '__main__':

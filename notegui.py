@@ -1,9 +1,12 @@
 #-*-coding:utf8-*-
 #!/usr/bin/python
 import wx
+import wx.grid
 import os
+import re
 
 ID_BUTTON_CLOSE = 2
+ID_BUTTON_STATUS = 10
 ID_STATIC_TITLE = 3
 ID_STATIC_STATUS = 4
 ID_PANEL_MAINPANEL = 5
@@ -29,6 +32,7 @@ class NoteTaskBar(wx.TaskBarIcon):
         self.initMenu()
 #        print "controller::%s"%controller
         self.select_note = None
+        self.note_list = None
         self.controller = controller
 
     def initMenu(self):
@@ -67,6 +71,7 @@ class NoteTaskBar(wx.TaskBarIcon):
         print 'new'
 
     def OnList(self,event):
+        self.note_list = NoteList(None,-1,"")
         print 'list'
 
     def OnConfig(self,event):
@@ -76,6 +81,41 @@ class NoteTaskBar(wx.TaskBarIcon):
     def OnQuit(self,event):
         print 'quit'
         exit(1)
+
+class NoteList(wx.Frame):
+    def __init__(self, *args, **kwds):
+        # begin wxGlade: MyFrame.__init__
+        kwds["style"] = wx.DEFAULT_FRAME_STYLE
+        wx.Frame.__init__(self, *args, **kwds)
+        self.grid_list = wx.grid.Grid(self, -1, size=(1, 1))
+
+        self.__set_properties()
+        self.__do_layout()
+        self.Show(True)
+        # end wxGlade
+
+    def __set_properties(self):
+        # begin wxGlade: MyFrame.__set_properties
+        self.SetTitle("Note List")
+        self.grid_list.CreateGrid(10, 3)
+        self.grid_list.SetSelectionMode(wx.grid.Grid.wxGridSelectRows)
+        self.grid_list.SetColLabelValue(0, "Title")
+        self.grid_list.SetColLabelValue(1, "Open")
+        self.grid_list.SetColLabelValue(2, "Menu")
+        # end wxGlade
+
+    def __do_layout(self):
+        # begin wxGlade: MyFrame.__do_layout
+        sizer_1 = wx.BoxSizer(wx.VERTICAL)
+        sizer_1.Add(self.grid_list, 1, wx.EXPAND, 0)
+        self.SetSizer(sizer_1)
+#        sizer_1.Fit(self)
+        self.Layout()
+        # end wxGlade
+
+
+
+
 
 class SelectNoteDlg(wx.Dialog):
     def __init__(self,parent,id,title):
@@ -142,34 +182,44 @@ class SelectNoteDlg(wx.Dialog):
 
 
 class Note(wx.Frame):
+    re_get_body = re.compile("<div[^>]*?id=\"body\"[^>]*?>(.*?)</div>",re.M|re.I|re.U|re.S)
+
     def __init__(self,parent,id,title,memo):
         self.memo = memo
         self.body = None        #실제 데이터를 serialize한 값? 최신 값
 #        self.recent_body = None
         self.status = None      #status, ID_STATUS_MODIFIED:changed, ID_STATUS_RECENT:last, ..
-#        self.is_open = None     #창이 열려있는지, 닫겨있는지
+        self.is_modified = False
 
         self.initGUI(parent,id,title)
         self.Centre()
         self.Show(True)
         self.is_open = True
-        
+        self.lastMousePos = wx.Point(0, 0)
+
+        self.initTitle(title)
+
+    def initTitle(self,str):
+        self.title.SetLabel(str)
+
     def initData(self):
         ''' for overriding '''
         pass
 
     def initGUI(self,parent,id,title=""):
-        wx.Frame.__init__(self,parent,id,title,size=(200,250),style=wx.NO_BORDER)
+#        wx.Frame.__init__(self,parent,id,title,size=(200,250),style=wx.NO_BORDER)
+        wx.Frame.__init__(self,parent,id,title,size=(200,250),style=wx.DEFAULT_FRAME_STYLE)
         
+        self.SetClientSize(wx.Size(195,220))
         vbox = wx.BoxSizer(wx.VERTICAL)
 
 # hbox        
         hbox = wx.BoxSizer(wx.HORIZONTAL)
         self.title = wx.StaticText(self,ID_STATIC_TITLE,'',(0,0))
-        self.status = wx.StaticText(self,ID_STATIC_STATUS,'o',(0,0),size=(20,20),style=wx.ALIGN_CENTRE|wx.SUNKEN_BORDER)
+        self.button_status = wx.Button(self,ID_BUTTON_STATUS,'o',(0,0),size=(20,20),style=wx.SIMPLE_BORDER)
         self.button_close = wx.Button(self,ID_BUTTON_CLOSE,"X",(0,0),size=(20,20),style=wx.SIMPLE_BORDER)
         hbox.Add(self.title,1,wx.EXPAND,0)
-        hbox.Add(self.status,0,wx.EXPAND,1)
+        hbox.Add(self.button_status,0,wx.EXPAND,1)
         hbox.Add(self.button_close,0,wx.EXPAND,1)
 
 # vbox
@@ -178,38 +228,80 @@ class Note(wx.Frame):
         vbox.Add(self.mainpanel,1,wx.EXPAND|wx.ALL,0)
 
         self.Bind(wx.EVT_BUTTON,self.OnClose,id=ID_BUTTON_CLOSE)
+        self.Bind(wx.EVT_BUTTON,self.OnStatus,id=ID_BUTTON_STATUS)
 
         self.SetSizer(vbox)
      
         self.Bind(wx.EVT_TIMER,self.OnTimerEvent)
         self.timer = wx.Timer(self)
 
-    def StartTimer(self,max_time=None):
+#        self.Bind(wx.EVT_MOTION, self.OnNoteMotion)
+#        self.Bind(wx.EVT_MOTION, self.OnNoteMotion,self.title)
+#        self.Bind(wx.EVT_LEFT_DOWN, self.OnNoteLeftDown)
+#        self.Bind(wx.EVT_LEFT_DOWN, self.OnNoteLeftDown,self.title)
+
+    def StartTimer(self,max_time=DEFAULT_TIMER_TIME):
         if self.timer.IsRunning():
             self.timer.Stop()
-        if max_time:
-            self.timer.Start(max_time)
-        else:
-            self.timer.Start(DEFAULT_TIMER_TIME)
+        self.timer.Start(max_time)
+
+    def StopTimer(self):
+        self.timer.Stop()
 
     def OnTimerEvent(self,evt):
         ''' 자동 저장 부분 '''
         print "event finished"
-        self.timer.Stop()
+        self.StopTimer()
+        self.UpdateNote()
+        self.SetStatusRecent()
         
+    def OnNoteMotion(self,evt):
+        print "pos: %s"%self.lastMousePos
+        if evt.LeftIsDown():
+            x, y = evt.GetPosition()
+            print "x,y : %d %d" % (x,y)
+#            x, y = self.GetPosition()
+#            dX = x - self.lastMousePos[0]
+            dX = x - self.lastMousePos.x
+#            dY = y - self.lastMousePos[1]
+            dY = y - self.lastMousePos.y
+            print "dx,dy : %d %d" % (dX,dY)
+            self.lastMousePos = wx.Point(x,y)
+            x, y = self.GetPosition()
+            print "self.x,y : %d %d" % (x,y)
+#            x, y = evt.GetPosition()
+            self.Move(wx.Point(x + dX, y + dY))
+        evt.Skip()
+
+    def OnNoteLeftDown(self,evt):
+        print "aa"
+        self.lastMousePos = evt.GetPosition()
+        print "leftdown : %s"  % self.lastMousePos
+        evt.Skip()
     
     def SetStatusModified(self):
-        self.status.SetValue("+")
+        self.is_modified = True
+        self.button_status.SetLabel("+")
+
 
     def SetStatusRecent(self):
-        self.status.SetValue("o")
+        self.is_modified = False
+        self.button_status.SetLabel("o")
+
 
     def SetTitle(self,str):
         self.title.SetValue(str)
 
+        
+    def OnStatus(self,event):
+        if self.is_modified:
+            self.StopTimer()
+            self.UpdateNote()
+            self.SetStatusRecent()
+
     def OnClose(self,event):
-        print "closeclose"
-        self.is_open = False
+        self.CloseNote()
+    
 
     def SetChangeState(self):
         ''' 내용이 변경되었는지 확인하는 부분(이벤트 바인딩 처리) '''
@@ -220,16 +312,23 @@ class Note(wx.Frame):
         pass
 
     
-    def GetBody(self):
+    def GetBodyFromSource(self):
         ''' for overriding '''
         pass
         
     def SerializeBody(self):
         ''' for overriding '''
+        ''' 입력한 데이터를 serialize해서 div에 감싸서 리턴 '''
         pass
 
     def UpdateNote(self):
-        '''  '''
+        ''' 현재 값으로 springnote에 업로드 한다  '''
+        self.memo.save_memo()
+
+    def CloseNote(self):
+        self.Close()
+        self.memo.close_memo()
+
 
 class NormalNote(Note):
     ID_TEXT = 2
@@ -250,22 +349,45 @@ class NormalNote(Note):
         self.Layout()
 
     def initData(self):
-        print "text : %s" %self.memo.page.source
-        self.SetBody(self.memo.page.source)
+        '''memo로부터 넘어온 page.source를 이용해 실제 serialize된 데이터를
+           parsing 한다'''
+#        print "init data..."
+#        print "source :: %s" % self.memo.page.source
+        self.body = self.GetBodyFromSource(self.memo.page.source)
+#        print "self.body :: %s" % self.body
+        self.SetBody(self.body)
+#        print "initdata finished"
  
+
+
     def SetChangeState(self):
         self.Bind(wx.EVT_TEXT,self.OnChange,id=NormalNote.ID_TEXT)
-        if self.text.IsModified():
-            print "mmm"
     
     def OnChange(self,evt):
+        self.SetStatusModified()
         self.StartTimer()
         print "mmm"
 
-        
+    def GetBodyFromSource(self,source):
+        ''' source값을 변경하여 현재 body를 채운다
+            <p>(.*?)</p>로 감싼부분을 (.*?)\n으로 바꿔준다  '''
+        body = Note.re_get_body.findall(source)[0]
+        re_replace1 = re.compile("<p>(.*?)</p>",re.M|re.I|re.U|re.S)
+        body2 = re_replace1.sub('\g<1>\n',body)
+        print "changed body ::::::::%s" % body2
+
+        return body2
+
     def SerializeBody(self):
-        ''' for overriding '''
-        pass
+        rval = ""
+        str = self.GetBody()
+        arr = str.split('\n')
+        for str2 in str.split('\n'):
+            rval += "<p>" + str2 + "</p>"
+
+        body = "<div id=\"body\">" + rval +  "</div>"
+        return body
+
 
     def SetBody(self,str):
         self.text.SetValue(str)
