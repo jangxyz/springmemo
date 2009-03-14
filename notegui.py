@@ -4,6 +4,7 @@ import wx
 import wx.grid
 import os
 import re
+import webbrowser
 
 ID_BUTTON_CLOSE = 2
 ID_BUTTON_STATUS = 10
@@ -30,15 +31,14 @@ class NoteTaskBar(wx.TaskBarIcon):
         icon.SetHeight(25)
         self.SetIcon(icon,"springmemo")
         self.initMenu()
-#        print "controller::%s"%controller
-        self.select_note = None
-        self.note_list = None
+        self.select_memo = None
+        self.memo_list = None
         self.controller = controller
 
     def initMenu(self):
         self.menu = wx.Menu()
-        task_new = wx.MenuItem(self.menu, ID_TASK_NEW, '새 노트')
-        task_list = wx.MenuItem(self.menu, ID_TASK_LIST, '노트 목록')
+        task_new = wx.MenuItem(self.menu, ID_TASK_NEW, '새 메모')
+        task_list = wx.MenuItem(self.menu, ID_TASK_LIST, '메모 목록')
         task_config = wx.MenuItem(self.menu, ID_TASK_CONFIG, '환경 설정')
         task_quit = wx.MenuItem(self.menu, ID_TASK_QUIT, '종료')
         self.menu.AppendItem(task_new)
@@ -58,20 +58,20 @@ class NoteTaskBar(wx.TaskBarIcon):
         self.PopupMenu(self.menu)
 
     def OnNew(self,event):
-        if self.select_note == None:
-            self.select_note = SelectNoteDlg(None,-1,"select Note")
-            rval = self.select_note.ShowModal()
+        if self.select_memo == None:
+            self.select_memo = SelectNoteDlg(None,-1,"select Memo")
+            rval = self.select_memo.ShowModal()
             if rval == wx.ID_OK:
-                type = self.select_note.selected_type
-                title = self.select_note.text_title.GetValue()
+                type = self.select_memo.selected_type
+                title = self.select_memo.text_title.GetValue()
                 self.controller.create_new_memo(type,title,sub=True)
 
-            self.select_note.Destroy()
-            self.select_note = None
+            self.select_memo.Destroy()
+            self.select_memo = None
         print 'new'
 
     def OnList(self,event):
-        self.note_list = NoteList(None,-1,"")
+        self.memo_list = MemoList(None,-1,"",self.controller)
         print 'list'
 
     def OnConfig(self,event):
@@ -82,38 +82,180 @@ class NoteTaskBar(wx.TaskBarIcon):
         print 'quit'
         exit(1)
 
-class NoteList(wx.Frame):
-    def __init__(self, *args, **kwds):
-        # begin wxGlade: MyFrame.__init__
-        kwds["style"] = wx.DEFAULT_FRAME_STYLE
-        wx.Frame.__init__(self, *args, **kwds)
-        self.grid_list = wx.grid.Grid(self, -1, size=(1, 1))
 
+class AuthDialog(wx.Dialog):
+    def __init__(self,parent=None,id=-1,auth_url=None):
+        title = "SpringMemo 인증"
+        wx.Dialog.__init__(self, parent, id, title)
+
+        self.is_auth_clicked = False
+        self.auth_url = auth_url
+        self.is_auth_save = False
+        self.bitmap_guide = wx.StaticBitmap(self, -1, wx.Bitmap(u"/home/looca/바탕화면/springmemo전체구조.png", wx.BITMAP_TYPE_ANY))
+        self.button_goauth = wx.Button(self, -1, "인증하러 가기")
+        self.button_ok = wx.Button(self, -1, "다음으로")
+        self.button_quit = wx.Button(self, -1, "종료")
+        self.checkbox_issave = wx.CheckBox(self, -1, "인증저장")
         self.__set_properties()
         self.__do_layout()
-        self.Show(True)
-        # end wxGlade
+        self.set_event()
+
+    def set_event(self):
+        self.Bind(wx.EVT_BUTTON,self.OnGoAuth,self.button_goauth)
+        self.Bind(wx.EVT_BUTTON,self.OnOk,self.button_ok)
+        self.Bind(wx.EVT_BUTTON,self.OnQuit,self.button_quit)
+        self.Bind(wx.EVT_CHECKBOX,self.OnCheck,self.checkbox_issave)
 
     def __set_properties(self):
-        # begin wxGlade: MyFrame.__set_properties
-        self.SetTitle("Note List")
-        self.grid_list.CreateGrid(10, 3)
-        self.grid_list.SetSelectionMode(wx.grid.Grid.wxGridSelectRows)
-        self.grid_list.SetColLabelValue(0, "Title")
-        self.grid_list.SetColLabelValue(1, "Open")
-        self.grid_list.SetColLabelValue(2, "Menu")
+        # begin wxGlade: MyDialog1.__set_properties
+        self.SetTitle("SpringMemo 인증창")
+        self.SetSize((400, 350))
+        self.bitmap_guide.SetMinSize((400, 300))
+        self.button_ok.Enable(False)
         # end wxGlade
 
     def __do_layout(self):
-        # begin wxGlade: MyFrame.__do_layout
-        sizer_1 = wx.BoxSizer(wx.VERTICAL)
-        sizer_1.Add(self.grid_list, 1, wx.EXPAND, 0)
-        self.SetSizer(sizer_1)
-#        sizer_1.Fit(self)
+        # begin wxGlade: MyDialog1.__do_layout
+        sizer_2 = wx.BoxSizer(wx.VERTICAL)
+        sizer_3 = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_2.Add(self.bitmap_guide, 0, 0, 0)
+        sizer_3.Add(self.button_goauth, 1, wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_HORIZONTAL|wx.ALIGN_CENTER_VERTICAL, 10)
+        sizer_3.Add(self.checkbox_issave, 1, wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_HORIZONTAL|wx.ALIGN_CENTER_VERTICAL, 10)
+        sizer_3.Add(self.button_ok, 1, wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_HORIZONTAL|wx.ALIGN_CENTER_VERTICAL, 10)
+        sizer_3.Add(self.button_quit, 1, wx.LEFT|wx.RIGHT|wx.ALIGN_CENTER_HORIZONTAL|wx.ALIGN_CENTER_VERTICAL, 10)
+        sizer_2.Add(sizer_3, 1, wx.ALL|wx.EXPAND|wx.ALIGN_CENTER_HORIZONTAL|wx.ALIGN_CENTER_VERTICAL, 10)
+        self.SetSizer(sizer_2)
         self.Layout()
         # end wxGlade
 
 
+    def OnGoAuth(self,evt):
+        ''' self.auth_url을 타겟으로 브라우저를 띄워준다 '''
+        webbrowser.open_new(self.auth_url)
+        self.is_auth_clicked = True
+        self.button_ok.Enable(True)
+        print "i opened : %s" % self.auth_url
+
+    def OnOk(self,evt):
+        if self.is_auth_clicked:
+            self.EndModal(wx.ID_OK)
+
+    def OnQuit(self,evt):
+        self.EndModal(wx.ID_CANCEL)
+
+    def OnCheck(self,evt):
+        self.is_auth_save = self.checkbox_issave.GetValue()
+#        print "clcl,value : %s"  % self.checkbox_issave.GetValue()
+
+
+
+
+class MemoList(wx.Frame):
+    def __init__(self,parent=None,id=-1,title=None,controller=None):
+        self.controller = controller
+        wx.Frame.__init__(self, parent, id, title, style=wx.DEFAULT_FRAME_STYLE)
+
+        self.__set_properties()
+        self.__do_layout()
+        self.SetEvent()
+        self.InitData()
+        self.mainbox.Fit(self)
+
+        self.Show(True)
+
+    def __set_properties(self):
+        # begin wxGlade: MyFrame.__set_properties
+        self.SetTitle("Note List")
+#        self.SetScrollbar(wx.VERTICAL,10,10,10)
+#        self.SetSize((310,400))
+
+    def __do_layout(self):
+        self.mainbox = wx.BoxSizer(wx.VERTICAL)
+        self.vbox = wx.BoxSizer(wx.VERTICAL)
+
+        self.mainbox.Add(self.vbox,0,wx.EXPAND,0)
+        self.SetSizer(self.mainbox)
+
+    def SetEvent(self):
+        pass
+
+    def InitData(self):
+        memos = self.controller.memos;
+        for memo in memos:
+            self.vbox.Add(self.MemoNode(memo,parent=self), 1, wx.TOP|wx.BOTTOM, 5)
+
+
+
+    class MemoNode(wx.Panel):
+        def __init__(self,memo,parent=None,id=-1):
+            wx.Panel.__init__(self, parent, id)
+
+            self.memo = memo
+            self.hbox = wx.BoxSizer(wx.HORIZONTAL)
+            self.text_title = wx.TextCtrl(self, -1, "", style=wx.NO_BORDER)
+            self.button_modify = wx.Button(self, -1, "M")
+            self.button_isopen = wx.Button(self, -1, "O")
+            self.button_delete = wx.Button(self, -1, "D")
+
+            self.__set_properties()
+            self.__do_layout()
+            self.SetEvent()
+
+            self.InitData()
+
+        def __set_properties(self):
+            self.SetSize((310,35))
+            self.text_title.SetMinSize((200, 23))
+#            self.text_title.Enable(False)
+            self.text_title.SetEditable(False)
+            self.button_modify.SetMinSize((25, 25))
+            self.button_isopen.SetMinSize((25, 25))
+            self.button_delete.SetMinSize((25, 25))
+        
+        def __do_layout(self):
+            self.hbox.Add(self.text_title, 0, wx.LEFT|wx.RIGHT, 5)
+            self.hbox.Add(self.button_modify, 0, wx.LEFT, 5)
+            self.hbox.Add(self.button_isopen, 0, wx.LEFT, 5)
+            self.hbox.Add(self.button_delete, 0, wx.LEFT|wx.RIGHT, 5)
+            self.SetSizer(self.hbox)
+
+        def SetEvent(self):
+            self.Bind(wx.EVT_BUTTON,self.OnButtonModify,self.button_modify)
+            self.Bind(wx.EVT_BUTTON,self.OnButtonIsOpen,self.button_isopen)
+            self.Bind(wx.EVT_BUTTON,self.OnButtonDelete,self.button_delete)
+
+        def InitData(self):
+            self.SetText(self.memo.page.title)
+            self.CheckIsOpen()
+
+
+        def OnButtonModify(self,evt):
+            ''' self.text_title을 활성화하고 다른 두버튼을 비활성화 한 다음
+                현재 버튼을 '수정완료'쯤으로 바꿔서 수정이 가능하게 한다
+                완료 후 page.title을 수정하고 업로드
+            '''
+            print "modify"
+
+        def OnButtonIsOpen(self,evt):
+            ''' is_open상태를 수정하고 서버로 업로드  '''
+            print "isopen : %s" % self.memo.header.is_open
+            self.memo.header.is_open = not self.memo.header.is_open
+            self.memo.view.CheckShowNote(self.memo.header.is_open)
+            self.memo.save_memo()
+            self.CheckIsOpen()
+
+        def OnButtonDelete(self,evt):
+            ''' 이 메모를 서버에서 삭제하고 프로그램에서도 지운다 '''
+            print "delete"
+
+        def SetText(self,str):
+            self.text_title.SetValue(str)
+
+        def CheckIsOpen(self):
+            if self.memo.header.is_open:
+                self.button_isopen.SetLabel("O")
+            else:
+                self.button_isopen.SetLabel("X")
 
 
 
@@ -121,7 +263,7 @@ class SelectNoteDlg(wx.Dialog):
     def __init__(self,parent,id,title):
         # begin wxGlade: MyDialog1.__init__
         wx.Dialog.__init__(self, parent, id, title)
-        self.radio_type = wx.RadioBox(self, -1, "radio_box_1", choices=["Normal", "Todo", "Calender"], majorDimension=3, style=wx.RA_SPECIFY_COLS)
+        self.radio_type = wx.RadioBox(self, -1, "type", choices=["Normal", "Todo", "Calender"], majorDimension=3, style=wx.RA_SPECIFY_COLS)
         self.label_1 = wx.StaticText(self, -1, "title")
         self.text_title = wx.TextCtrl(self, -1, "")
         self.button_ok = wx.Button(self, wx.ID_OK, "OK")
@@ -131,11 +273,11 @@ class SelectNoteDlg(wx.Dialog):
 
         self.__set_properties()
         self.__do_layout()
-        self.__set_event_handler()
+        self.SetEvent()
         # end wxGlade
 
 
-    def __set_event_handler(self):
+    def SetEvent(self):
         self.Bind(wx.EVT_RADIOBOX,self.OnRadioChanged,self.radio_type)
         self.Bind(wx.EVT_BUTTON,self.OnOk,self.button_ok)
         self.Bind(wx.EVT_BUTTON,self.OnCancel,self.button_cancel)
@@ -193,11 +335,12 @@ class Note(wx.Frame):
 
         self.initGUI(parent,id,title)
         self.Centre()
-        self.Show(True)
-        self.is_open = True
+#        self.Show(True)
+#        self.is_open = True
         self.lastMousePos = wx.Point(0, 0)
 
         self.initTitle(title)
+        self.CheckShowNote()
 
     def initTitle(self,str):
         self.title.SetLabel(str)
@@ -326,8 +469,18 @@ class Note(wx.Frame):
         self.memo.save_memo()
 
     def CloseNote(self):
-        self.Close()
+#        self.Close()
+        self.Show(False)
         self.memo.close_memo()
+#        self.CheckShowNote()
+
+    def CheckShowNote(self,val=None):
+#        if self.memo.header.is_open:
+#            self.Show(True)
+        if val != None:
+            self.Show(val)
+        else:
+            self.Show(self.memo.header.is_open)
 
 
 class NormalNote(Note):
@@ -336,8 +489,8 @@ class NormalNote(Note):
     def __init__(self,parent,id,title,memo=None):
         Note.__init__(self,parent,id,title,memo)
         self.initCustomGUI()
-        self.SetChangeState()
         self.initData()
+        self.SetChangeState()
 
     def initCustomGUI(self):
         ''' for overriding '''
@@ -374,7 +527,7 @@ class NormalNote(Note):
         body = Note.re_get_body.findall(source)[0]
         re_replace1 = re.compile("<p>(.*?)</p>",re.M|re.I|re.U|re.S)
         body2 = re_replace1.sub('\g<1>\n',body)
-        print "changed body ::::::::%s" % body2
+#        print "changed body ::::::::%s" % body2
 
         return body2
 
@@ -396,6 +549,7 @@ class NormalNote(Note):
         return self.text.GetValue()
 
 
+############# Useless Codes #############3
 
 class NoteGui(wx.Frame):
     def __init__(self,parent,id,title):

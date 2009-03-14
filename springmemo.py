@@ -17,6 +17,8 @@ class SpringMemo:
         self.notegui = notegui.NoteTaskBar(self)
         self.memos = []
         self.rootmemo = None
+        self.authdialog = None
+        self.is_auth_save = False       #access_token을 저장 하는 가
 
     def find_access_file(self):
         if os.path.exists(DEFAULT_FILE_NAME):
@@ -32,6 +34,7 @@ class SpringMemo:
         ''' authorize 파일이 있는지 확인하고 있으면 client바로 설정,
             없으면 client를 이용해 url을 만들고 인증하여 설정 '''
         client = springnote_client.SpringnoteClient()
+        confirmed = False
         #file check
         access_arr = self.find_access_file()
         #if ok,
@@ -39,11 +42,33 @@ class SpringMemo:
             client.set_access_token_directly(access_arr[0],access_arr[1])
         else:
         #if not,
+            print "out "
             request_token = client.fetch_request_token()
-            self.notegui.show_authorize(authorize_url(request_token))
-            #여기서 대기, dialog을 띄우고 ShowModal로 인증을 기다린다
-            access_token = client.fetch_access_token(request_token)
-            #여기서 인증 에러 나면, 앞 위치로 돌아가 "다시한번" alert창
+#            self.notegui.show_authorize(authorize_url(request_token))
+            print "out2 "
+
+            while confirmed == False:
+
+                print "in "
+                self.authdialog = notegui.AuthDialog(auth_url=client.authorize_url(request_token))
+                rval = self.authdialog.ShowModal()
+                #여기서 대기, dialog을 띄우고 ShowModal로 인증을 기다린다
+                if rval == wx.ID_OK:
+                    #여기서 인증 에러 나면, 앞 위치로 돌아가 "다시한번" alert창
+                    #(SpringnoteError.NotAuthorized 익셉션 발생하면)
+                    try:
+                        access_token = client.fetch_access_token(request_token)
+                    except springnote_client.SpringnoteError.NotAuthorized:
+                        confirmed = False
+                    else:
+                        self.is_auth_save = self.authdialog.is_auth_save
+                        confirmed = True
+                        self.authdialog.Destroy()
+
+                elif rval == wx.ID_CANCEL:
+                    confirmed = True
+                    self.quit_app()
+
 
         springnote_client.Page.set_page_client(client)
 
@@ -67,6 +92,12 @@ class SpringMemo:
 #                self.memos.append(memo)
             self.memos.append(memo)
 
+    def quit_app(self,memo_update=False,save_auth=False):
+        ''' note_update가 True면 전체 Memo를 돌아가며 최신인지 아닌지 판단,
+            저장한다. save_auth가 True면, 현재 access_file과 비교하여 저장
+        '''
+        exit(1)
+        
 
 class Memo:
     def __init__(self, view=None, page=None, header=None):
@@ -106,6 +137,7 @@ class Memo:
         ''' self.view의 데이터를 시리얼라이즈 하여(self.view.serialize?)
             self.header.make_source_from_header() 와 합쳐서 업로드
             page와 header가 있으면 그걸로, 없으면 self.으로..
+        /// view가 열리지 않은 page라면?
         '''
         if view == None:
             view = self.view
@@ -122,9 +154,9 @@ class Memo:
         '''
         header = PageHeader.parse_header_from_source(page.source)
         memo = Memo(page=page,header=header)
-        if header.is_open == True:
-            print "open open"
-            memo.view = memo.get_view(header.type,page.title)
+#        if header.is_open == True: #열린상태일때만 생김
+#            memo.view = memo.get_view(header.type,page.title)
+        memo.view = memo.get_view(header.type,page.title) #무조건 생김
         return memo
 
 

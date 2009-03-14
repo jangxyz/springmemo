@@ -67,6 +67,7 @@ class SpringnoteClient:
         body = response.read()
         if body.startswith('Invalid OAuth Request'):
             raise SpringnoteError.NotAuthorized
+            return None
         
         self.access_token = oauth.OAuthToken.from_string(body)
         return self.access_token
