@@ -62,8 +62,9 @@ class NoteTaskBar(wx.TaskBarIcon):
             self.select_memo = SelectNoteDlg(None,-1,"select Memo")
             rval = self.select_memo.ShowModal()
             if rval == wx.ID_OK:
-                type = self.select_memo.selected_type
+                type = self.select_memo.GetSelectedType()
                 title = self.select_memo.text_title.GetValue()
+#                print "On New :: type: %s, title : %s" % (type,title)
                 self.controller.create_new_memo(type,title,sub=True)
 
             self.select_memo.Destroy()
@@ -80,7 +81,8 @@ class NoteTaskBar(wx.TaskBarIcon):
 
     def OnQuit(self,event):
         print 'quit'
-        exit(1)
+#        exit(1)
+        self.controller.quit_app()
 
 
 class AuthDialog(wx.Dialog):
@@ -145,7 +147,6 @@ class AuthDialog(wx.Dialog):
 
     def OnCheck(self,evt):
         self.is_auth_save = self.checkbox_issave.GetValue()
-#        print "clcl,value : %s"  % self.checkbox_issave.GetValue()
 
 
 
@@ -190,9 +191,10 @@ class MemoList(wx.Frame):
         def __init__(self,memo,parent=None,id=-1):
             wx.Panel.__init__(self, parent, id)
 
+            self.on_modifying = False
             self.memo = memo
             self.hbox = wx.BoxSizer(wx.HORIZONTAL)
-            self.text_title = wx.TextCtrl(self, -1, "", style=wx.NO_BORDER)
+            self.text_title = wx.TextCtrl(self, -1, "", style=wx.NO_BORDER|wx.TE_PROCESS_ENTER)
             self.button_modify = wx.Button(self, -1, "M")
             self.button_isopen = wx.Button(self, -1, "O")
             self.button_delete = wx.Button(self, -1, "D")
@@ -223,6 +225,7 @@ class MemoList(wx.Frame):
             self.Bind(wx.EVT_BUTTON,self.OnButtonModify,self.button_modify)
             self.Bind(wx.EVT_BUTTON,self.OnButtonIsOpen,self.button_isopen)
             self.Bind(wx.EVT_BUTTON,self.OnButtonDelete,self.button_delete)
+            self.Bind(wx.EVT_TEXT_ENTER,self.OnButtonModify,self.text_title)
 
         def InitData(self):
             self.SetText(self.memo.page.title)
@@ -235,6 +238,24 @@ class MemoList(wx.Frame):
                 완료 후 page.title을 수정하고 업로드
             '''
             print "modify"
+            if evt.GetEventType() == wx.EVT_TEXT_ENTER.evtType[0]\
+                and not self.on_modifying:
+                return
+
+            if not self.on_modifying:
+#                self.text_title.Enable(True)
+                self.on_modifying = True
+                self.text_title.SetEditable(True)
+                self.button_modify.SetLabel("저장")
+            else:
+                if len(self.text_title.GetValue()) > 0:
+                    self.memo.set_title(self.text_title.GetValue())
+                    self.memo.save_memo()
+                    self.button_modify.SetLabel("M")
+                    self.on_modifying = False
+                    self.text_title.SetEditable(False)
+
+                #여기서 저장
 
         def OnButtonIsOpen(self,evt):
             ''' is_open상태를 수정하고 서버로 업로드  '''
@@ -269,13 +290,16 @@ class SelectNoteDlg(wx.Dialog):
         self.button_ok = wx.Button(self, wx.ID_OK, "OK")
         self.button_cancel = wx.Button(self, wx.ID_CANCEL, "Cancel")
 
-        self.selected_type = None
+        self.selected_type = 0
 
         self.__set_properties()
         self.__do_layout()
         self.SetEvent()
+
+        self.radio_type.SetSelection(0)
         # end wxGlade
 
+        print "nowselection:: %d" % self.selected_type
 
     def SetEvent(self):
         self.Bind(wx.EVT_RADIOBOX,self.OnRadioChanged,self.radio_type)
@@ -320,7 +344,15 @@ class SelectNoteDlg(wx.Dialog):
     def OnCancel(self,evt):
         self.EndModal(wx.ID_CANCEL)
 
-
+    def GetSelectedType(self):
+        if self.selected_type == 0:
+            return 1  #MEMO_TYPE_NORMAL
+        elif self.selected_type == 1:
+            return 2  #MEMO_TYPE_TODO
+        elif self.selected_type == 2:
+            return 3  #MEMO_TYPE_SCHEDULE
+        else:
+            return 0
 
 
 class Note(wx.Frame):
@@ -329,14 +361,10 @@ class Note(wx.Frame):
     def __init__(self,parent,id,title,memo):
         self.memo = memo
         self.body = None        #실제 데이터를 serialize한 값? 최신 값
-#        self.recent_body = None
-        self.status = None      #status, ID_STATUS_MODIFIED:changed, ID_STATUS_RECENT:last, ..
         self.is_modified = False
 
         self.initGUI(parent,id,title)
         self.Centre()
-#        self.Show(True)
-#        self.is_open = True
         self.lastMousePos = wx.Point(0, 0)
 
         self.initTitle(title)
@@ -504,13 +532,9 @@ class NormalNote(Note):
     def initData(self):
         '''memo로부터 넘어온 page.source를 이용해 실제 serialize된 데이터를
            parsing 한다'''
-#        print "init data..."
-#        print "source :: %s" % self.memo.page.source
-        self.body = self.GetBodyFromSource(self.memo.page.source)
-#        print "self.body :: %s" % self.body
-        self.SetBody(self.body)
-#        print "initdata finished"
- 
+        if self.memo.page:          #page가 없으면 새 메모로 간주, 시리얼라이즈 하지 않음
+            self.body = self.GetBodyFromSource(self.memo.page.source)
+            self.SetBody(self.body)
 
 
     def SetChangeState(self):

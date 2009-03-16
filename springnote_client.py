@@ -20,7 +20,8 @@ class SpringnoteClient:
     DEFAULT_ROOT_TAG = 'springmemorootpage'
 #    DEFAULT_ROOT_TITLE = unicode('SpringMemo 최상위 페이지입니다','utf-8')
     DEFAULT_ROOT_TITLE = 'SpringMemo 최상위 페이지입니다'
-   
+ 
+#### useless method
     def print_client(self):
         print "::::::::: print client ::::::::"
         print " consumer :: %s" % self.consumer
@@ -31,7 +32,7 @@ class SpringnoteClient:
         print " access secret :: %s" % self.access_token.secret
         print " signature_method :: %s" % self.signature_method
         print "::::::::: print client finished ::::::::"
-
+##############3
 
     def __init__(self):
         self.consumer = oauth.OAuthConsumer(self.CONSUMER_TOKEN, self.CONSUMER_TOKEN_SECRET)

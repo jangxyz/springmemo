@@ -10,7 +10,8 @@ MEMO_TYPE_NORMAL = 1
 MEMO_TYPE_TODO = 2
 
 
-DEFAULT_FILE_NAME = "access_file.txt"
+#DEFAULT_FILE_NAME = "access_file.txt"
+DEFAULT_FILE_NAME = "user_file.txt"
 
 class SpringMemo:
     def __init__(self):
@@ -19,15 +20,47 @@ class SpringMemo:
         self.rootmemo = None
         self.authdialog = None
         self.is_auth_save = False       #access_token을 저장 하는 가
+        self.access_token = None
+        self.access_token_secret = None
 
-    def find_access_file(self):
+        self.init_app()
+
+    def init_app(self):
+        self.user_authorize()
+        self.rootmemo = Memo.get_root_memo()
+        self.init_all_memos()
+
+
+#    def find_access_file(self):
+#        if os.path.exists(DEFAULT_FILE_NAME):
+#            access_file = file(DEFAULT_FILE_NAME,'r')
+#            str = access_file.read()
+#            str = str[0:len(str)-1]  # EOF 삭제
+#            arr = str.split(' ')
+#            return arr
+#        return None
+
+    def get_user_file(self):
+        ''' 사용자의 컴퓨터에 저장될 파일을 연다
+            access_token, access_token_secret, is_auth_save
+        '''
         if os.path.exists(DEFAULT_FILE_NAME):
-            access_file = file(DEFAULT_FILE_NAME,'r')
-            str = access_file.read()
-            str = str[0:len(str)-1]  # EOF 삭제
-            arr = str.split(' ')
-            return arr
-        return None
+            user_file = file(DEFAULT_FILE_NAME,'r')
+            data_arr = user_file.read().split('\n')
+            self.access_token = data_arr[0]
+            self.access_token_secret = data_arr[1]
+#            self.is_auth_save = bool(data_arr[2])
+            self.is_auth_save = True #이미 저장되어있으므로 지금도 True
+            user_file.close()
+            return True
+        return False
+
+    def save_user_file(self,access_token):
+        user_file = file(DEFAULT_FILE_NAME,'w')
+        user_file.write(access_token.key + '\n')
+        user_file.write(access_token.secret + '\n')
+        user_file.close()
+
 
 
     def user_authorize(self):
@@ -35,21 +68,15 @@ class SpringMemo:
             없으면 client를 이용해 url을 만들고 인증하여 설정 '''
         client = springnote_client.SpringnoteClient()
         confirmed = False
-        #file check
-        access_arr = self.find_access_file()
-        #if ok,
-        if access_arr:
-            client.set_access_token_directly(access_arr[0],access_arr[1])
+#        access_arr = self.find_access_file()
+#        if access_arr:
+        if self.get_user_file():
+            client.set_access_token_directly(self.access_token,self.access_token_secret)
         else:
-        #if not,
-            print "out "
             request_token = client.fetch_request_token()
 #            self.notegui.show_authorize(authorize_url(request_token))
-            print "out2 "
 
             while confirmed == False:
-
-                print "in "
                 self.authdialog = notegui.AuthDialog(auth_url=client.authorize_url(request_token))
                 rval = self.authdialog.ShowModal()
                 #여기서 대기, dialog을 띄우고 ShowModal로 인증을 기다린다
@@ -62,6 +89,8 @@ class SpringMemo:
                         confirmed = False
                     else:
                         self.is_auth_save = self.authdialog.is_auth_save
+                        if self.is_auth_save:
+                            self.save_user_file(access_token=access_token)
                         confirmed = True
                         self.authdialog.Destroy()
 
@@ -76,7 +105,8 @@ class SpringMemo:
         ''' Memo 생성, self.memos에 append '''
         ''' sub : rootpage의 sub로 생성한다 '''
         if sub == True:
-            memo = Memo(type,title,rel=self.rootmemo.page.identifier)
+#            memo = Memo(type,title,rel=self.rootmemo.page.identifier)
+            memo = Memo.create(type,title,rel=self.rootmemo.page.identifier)
         else:
             memo = Memo(type,title,rel)
         self.memos.append(memo)
@@ -111,8 +141,10 @@ class Memo:
         ''' 완전히 새로 만드는 부분 '''
         memo = Memo()
 
-        memo.view = memo.get_view(type=type,title=title)
         memo.header = PageHeader(type=type)
+
+        memo.view = memo.get_view(type=type,title=title)
+
         default_source = memo.get_save_source()
 
         memo.page = springnote_client.Page.create_new_page(title,rel=rel,source=default_source,tags=tags) #domain?? skip!
@@ -159,8 +191,12 @@ class Memo:
         memo.view = memo.get_view(header.type,page.title) #무조건 생김
         return memo
 
+    def set_title(self,title):
+        self.view.initTitle(title)
+        self.page.title = title
 
     def get_view(self,type,title,is_open=True,parent=None,id=-1):
+        print "type :: %d" % type
         if type == MEMO_TYPE_NORMAL:
             view = notegui.NormalNote(parent,id,title,self)
         return view
@@ -224,11 +260,11 @@ class PageHeader:
 def run():
     app = notegui.wx.App()
     springmemo = SpringMemo()
-    springmemo.user_authorize()
-    print "now getroot"
-    springmemo.rootmemo = Memo.get_root_memo()
-    print "root :: %s" % springmemo.rootmemo.page
-    springmemo.init_all_memos()
+#    springmemo.user_authorize()
+#    print "now getroot"
+#    springmemo.rootmemo = Memo.get_root_memo()
+#    print "root :: %s" % springmemo.rootmemo.page
+#    springmemo.init_all_memos()
 
     app.MainLoop()
 
