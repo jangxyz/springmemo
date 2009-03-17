@@ -117,10 +117,11 @@ class SpringMemo:
         ''' Root페이지와 하부 모든 페이지를 가져온다 '''
         pages = springnote_client.Page.get_all_pages(self.rootmemo)
 
+        if not pages:
+            return
+
         for page in pages:
             memo = Memo.from_page(page)
-#            if memo != None:
-#                self.memos.append(memo)
             self.memos.append(memo)
 
     def quit_app(self,memo_update=False,save_auth=False):

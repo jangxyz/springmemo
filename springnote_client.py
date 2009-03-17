@@ -17,9 +17,8 @@ class SpringnoteClient:
     ACCESS_TOKEN_URL = 'https://api.springnote.com/oauth/access_token'
     AUTHORIZATION_URL = 'https://api.springnote.com/oauth/authorize'
 
-    DEFAULT_ROOT_TAG = 'springmemorootpage'
-#    DEFAULT_ROOT_TITLE = unicode('SpringMemo 최상위 페이지입니다','utf-8')
-    DEFAULT_ROOT_TITLE = 'SpringMemo 최상위 페이지입니다'
+    DEFAULT_ROOT_TAG = u'springmemorootpage'
+    DEFAULT_ROOT_TITLE = u'SpringMemo 최상위 페이지입니다'
  
 #### useless method
     def print_client(self):
@@ -160,7 +159,6 @@ class SpringnoteClient:
         # response
         response = connection.getresponse()
         body = response.read()
-#        print body
         page = self.handle_response(body)
 
         return page
@@ -188,7 +186,7 @@ class SpringnoteClient:
         parameters = {'parent_id': str(parent_id)}
         url = self.set_url("pages.json", parameters)
 
-        print "url : %s" % url
+#        print "url : %s" % url
 
         oauth_request = self.create_oauth_request('GET', url, parameters)
 
@@ -197,11 +195,13 @@ class SpringnoteClient:
         # response
         response = connection.getresponse()
         body = response.read()
-        print "body: %s" %body
+#        print "body: %s" %body
         raw_pages = self.handle_response(body)
-        print "page: %s" % raw_pages
-        ''' raw_pages의 각 identifier를 이용해 가져와야 함 (raw_pages엔 본문이 없음) '''
+#        print "page: %s" % raw_pages
+#        raw_pages의 각 identifier를 이용해 가져와야 함 (raw_pages엔 본문이 없음)
         pages = []
+        if not raw_pages:
+            return None
         for raw_page in raw_pages:
             pages.append(self.get_page(raw_page.identifier))
 
@@ -287,7 +287,6 @@ class Page:
     def __init__(self):
         for attr_name in self.attrset:
             setattr(self, attr_name, None)
-#        setattr(self,'view',None)             #UI에 대한 핸들 
 
     @staticmethod
     def from_jsons(body):
@@ -345,16 +344,6 @@ class Page:
             result[attr_name] = getattr(self,attr_name)
         return result
 
-    #def to_write_json(self):
-    #    result = {}
-    #    for attr_name in self.attrset:
-#   #         if(getattr(self,attr_name)!=None):
-#   #             print getattr(self,attr_name)
-#   #             result[attr_name] = getattr(self,attr_name).decode('euc-kr').encode('euc-kr')
-#   #         else:
-#   #             result[attr_name] = getattr(self,attr_name)
-    #        result[attr_name] = getattr(self,attr_name)
-    #    return json.dumps({'page':result})
 
     @staticmethod
     def update_from_dict(data):
@@ -421,11 +410,6 @@ class Page:
 
 
 
-
-#    def to_s(self):
-#        return "%s %s %s %s %s %s" % (self.identifier,self.date_created,
-#                self.date_modified, self.rights,
-#                self.creator, self.contributor_modified)
 
 
 
