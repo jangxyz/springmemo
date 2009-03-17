@@ -354,18 +354,56 @@ class SelectNoteDlg(wx.Dialog):
         else:
             return 0
 
+### Move Panel ####
+
+    class MovePanel(wx.Panel):
+        def __init__(self,parent,pos,size,style):
+            wx.Panel.__init__(self,parent,-1,pos=pos,size=size,style=style)
+            self.left_down = False
+            self.parentFrame = parent
+
+            while self.parentFrame.GetParent() is not None:
+                self.parentFrame = self.parentFrame.GetParent()
+
+            self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
+            self.Bind(wx.EVT_LEFT_UP, self.OnLeftUp)
+            self.Bind(wx.EVT_MOTION, self.OnMouseMove)
+
+        def OnLeftDown(self, evt):
+            self.CaptureMouse()
+            self.left_down = True
+            pos = self.ClientToScreen(evt.GetPosition())
+            origin = self.parentFrame.GetPosition()
+            dx = pos.x - origin.x
+            dy = pos.y - origin.y
+            self.delta = wx.Point(dx, dy)
+
+        def OnLeftUp(self, evt):
+            self.ReleaseMouse()
+            self.left_down = False
+
+        def OnMouseMove(self, evt):
+            if evt.Dragging() and self.left_down:
+                pos = self.ClientToScreen(evt.GetPosition())
+                fp = (pos.x - self.delta.x, pos.y - self.delta.y)
+                self.parentFrame.Move(fp)
+
+### End Move Panel ####
 
 class Note(wx.Frame):
     re_get_body = re.compile("<div[^>]*?id=\"body\"[^>]*?>(.*?)</div>",re.M|re.I|re.U|re.S)
+
+
 
     def __init__(self,parent,id,title,memo):
         self.memo = memo
         self.body = None        #실제 데이터를 serialize한 값? 최신 값
         self.is_modified = False
 
+        self.delta = wx.Point(0,0)
+
         self.initGUI(parent,id,title)
         self.Centre()
-        self.lastMousePos = wx.Point(0, 0)
 
         self.initTitle(title)
         self.CheckShowNote()
@@ -378,38 +416,39 @@ class Note(wx.Frame):
         pass
 
     def initGUI(self,parent,id,title=""):
-#        wx.Frame.__init__(self,parent,id,title,size=(200,250),style=wx.NO_BORDER)
-        wx.Frame.__init__(self,parent,id,title,size=(200,250),style=wx.DEFAULT_FRAME_STYLE)
+        wx.Frame.__init__(self,parent,id,title,size=(200,250),style=wx.NO_BORDER)
         
         self.SetClientSize(wx.Size(195,220))
         vbox = wx.BoxSizer(wx.VERTICAL)
 
 # hbox        
         hbox = wx.BoxSizer(wx.HORIZONTAL)
-        self.title = wx.StaticText(self,ID_STATIC_TITLE,'',(0,0))
-        self.button_status = wx.Button(self,ID_BUTTON_STATUS,'o',(0,0),size=(20,20),style=wx.SIMPLE_BORDER)
-        self.button_close = wx.Button(self,ID_BUTTON_CLOSE,"X",(0,0),size=(20,20),style=wx.SIMPLE_BORDER)
-        hbox.Add(self.title,1,wx.EXPAND,0)
-        hbox.Add(self.button_status,0,wx.EXPAND,1)
-        hbox.Add(self.button_close,0,wx.EXPAND,1)
+        self.panel_move = MovePanel(self,pos=(0,0),size=(20,20),style=wx.SIMPLE_BORDER)
+        self.title = wx.StaticText(self,-1,'',(0,0))
+#        self.button_status = wx.Button(self,ID_BUTTON_STATUS,'o',(0,0),size=(20,20),style=wx.SIMPLE_BORDER)
+        self.button_status = wx.BitmapButton(self,-1,wx.Bitmap("./icons2/green1.png"),style=wx.NO_BORDER,size=(20,20))
+#        self.button_status.SetBitmapHover(wx.Bitmap("./icons2/green2.png"))
+
+        self.button_close = wx.BitmapButton(self,-1,wx.Bitmap("./icons2/red1.png"),style=wx.NO_BORDER,size=(20,20))
+#        self.button_close.SetBitmapHover(wx.Bitmap("./icons2/red2.png"))
+#        self.button_close.SetBitmapHover(wx.Bitmap("./icons2/green2.png"))
+        hbox.Add(self.panel_move,0,wx.EXPAND,1)
+        hbox.Add(self.title,1,wx.EXPAND|wx.LEFT|wx.TOP,5)
+        hbox.Add(self.button_status,0,wx.EXPAND,0)
+        hbox.Add(self.button_close,0,wx.EXPAND,0)
 
 # vbox
         self.mainpanel = wx.Panel(self,ID_PANEL_MAINPANEL)
         vbox.Add(hbox,0,wx.EXPAND|wx.TOP,0)
         vbox.Add(self.mainpanel,1,wx.EXPAND|wx.ALL,0)
 
-        self.Bind(wx.EVT_BUTTON,self.OnClose,id=ID_BUTTON_CLOSE)
-        self.Bind(wx.EVT_BUTTON,self.OnStatus,id=ID_BUTTON_STATUS)
+        self.Bind(wx.EVT_BUTTON,self.OnClose,self.button_close)
+        self.Bind(wx.EVT_BUTTON,self.OnStatus,self.button_status)
 
         self.SetSizer(vbox)
      
         self.Bind(wx.EVT_TIMER,self.OnTimerEvent)
         self.timer = wx.Timer(self)
-
-#        self.Bind(wx.EVT_MOTION, self.OnNoteMotion)
-#        self.Bind(wx.EVT_MOTION, self.OnNoteMotion,self.title)
-#        self.Bind(wx.EVT_LEFT_DOWN, self.OnNoteLeftDown)
-#        self.Bind(wx.EVT_LEFT_DOWN, self.OnNoteLeftDown,self.title)
 
     def StartTimer(self,max_time=DEFAULT_TIMER_TIME):
         if self.timer.IsRunning():
@@ -426,38 +465,16 @@ class Note(wx.Frame):
         self.UpdateNote()
         self.SetStatusRecent()
         
-    def OnNoteMotion(self,evt):
-        print "pos: %s"%self.lastMousePos
-        if evt.LeftIsDown():
-            x, y = evt.GetPosition()
-            print "x,y : %d %d" % (x,y)
-#            x, y = self.GetPosition()
-#            dX = x - self.lastMousePos[0]
-            dX = x - self.lastMousePos.x
-#            dY = y - self.lastMousePos[1]
-            dY = y - self.lastMousePos.y
-            print "dx,dy : %d %d" % (dX,dY)
-            self.lastMousePos = wx.Point(x,y)
-            x, y = self.GetPosition()
-            print "self.x,y : %d %d" % (x,y)
-#            x, y = evt.GetPosition()
-            self.Move(wx.Point(x + dX, y + dY))
-        evt.Skip()
 
-    def OnNoteLeftDown(self,evt):
-        print "aa"
-        self.lastMousePos = evt.GetPosition()
-        print "leftdown : %s"  % self.lastMousePos
-        evt.Skip()
     
     def SetStatusModified(self):
         self.is_modified = True
-        self.button_status.SetLabel("+")
+        self.button_status.SetBitmapLabel(wx.Bitmap("./icons2/blue1.png"))
 
 
     def SetStatusRecent(self):
         self.is_modified = False
-        self.button_status.SetLabel("o")
+        self.button_status.SetBitmapLabel(wx.Bitmap("./icons2/green1.png"))
 
 
     def SetTitle(self,str):
