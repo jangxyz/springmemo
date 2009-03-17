@@ -6,22 +6,7 @@ import os
 import re
 import webbrowser
 
-ID_BUTTON_CLOSE = 2
-ID_BUTTON_STATUS = 10
-ID_STATIC_TITLE = 3
-ID_STATIC_STATUS = 4
-ID_PANEL_MAINPANEL = 5
-ID_TASK_NEW = 6
-ID_TASK_LIST = 7
-ID_TASK_CONFIG = 8
-ID_TASK_QUIT = 9
-
 DEFAULT_TIMER_TIME = 5000
-
-ID_STATUS_MODIFIED = 1
-ID_STATUS_RECENT = 2
-
-
 
 class NoteTaskBar(wx.TaskBarIcon):
     def __init__(self,controller=None):
@@ -37,18 +22,18 @@ class NoteTaskBar(wx.TaskBarIcon):
 
     def initMenu(self):
         self.menu = wx.Menu()
-        task_new = wx.MenuItem(self.menu, ID_TASK_NEW, '새 메모')
-        task_list = wx.MenuItem(self.menu, ID_TASK_LIST, '메모 목록')
-        task_config = wx.MenuItem(self.menu, ID_TASK_CONFIG, '환경 설정')
-        task_quit = wx.MenuItem(self.menu, ID_TASK_QUIT, '종료')
+        task_new = wx.MenuItem(self.menu, -1, '새 메모')
+        task_list = wx.MenuItem(self.menu, -1, '메모 목록')
+        task_config = wx.MenuItem(self.menu, -1, '환경 설정')
+        task_quit = wx.MenuItem(self.menu, -1, '종료')
         self.menu.AppendItem(task_new)
         self.menu.AppendItem(task_list)
         self.menu.AppendItem(task_config)
         self.menu.AppendItem(task_quit)
-        self.Bind(wx.EVT_MENU, self.OnNew, id=ID_TASK_NEW)
-        self.Bind(wx.EVT_MENU, self.OnList, id=ID_TASK_LIST)
-        self.Bind(wx.EVT_MENU, self.OnConfig, id=ID_TASK_CONFIG)
-        self.Bind(wx.EVT_MENU, self.OnQuit, id=ID_TASK_QUIT)
+        self.Bind(wx.EVT_MENU, self.OnNew, task_new)
+        self.Bind(wx.EVT_MENU, self.OnList, task_list)
+        self.Bind(wx.EVT_MENU, self.OnConfig, task_config)
+        self.Bind(wx.EVT_MENU, self.OnQuit, task_quit)
 
 
         wx.EVT_TASKBAR_RIGHT_UP(self,self.OnTaskBarRight)
@@ -154,7 +139,8 @@ class AuthDialog(wx.Dialog):
 class MemoList(wx.Frame):
     def __init__(self,parent=None,id=-1,title=None,controller=None):
         self.controller = controller
-        wx.Frame.__init__(self, parent, id, title, style=wx.DEFAULT_FRAME_STYLE)
+#        wx.Frame.__init__(self, parent, id, title, style=wx.DEFAULT_FRAME_STYLE)
+        wx.Frame.__init__(self, parent, id, title, style=wx.NO_BORDER)
 
         self.__set_properties()
         self.__do_layout()
@@ -172,32 +158,53 @@ class MemoList(wx.Frame):
 
     def __do_layout(self):
         self.mainbox = wx.BoxSizer(wx.VERTICAL)
+        self.titlebox = wx.BoxSizer(wx.HORIZONTAL)
         self.vbox = wx.BoxSizer(wx.VERTICAL)
 
-        self.mainbox.Add(self.vbox,0,wx.EXPAND,0)
+        self.panel_move = MovePanel(self,pos=(0,0),size=(20,20),style=wx.SIMPLE_BORDER)
+        self.title = wx.StaticText(self,-1,'',(0,0))
+        self.button_close = wx.BitmapButton(self,-1,wx.Bitmap("./icons2/red1.png"),style=wx.NO_BORDER,size=(20,20))
+
+        self.titlebox.Add(self.panel_move,0,wx.EXPAND,1)
+        self.titlebox.Add(self.title,1,wx.EXPAND|wx.LEFT|wx.TOP,5)
+        self.titlebox.Add(self.button_close,0,wx.EXPAND,0)
+
+        self.mainbox.Add(self.titlebox,0,wx.EXPAND,0)
+        self.mainbox.Add(self.vbox,1,wx.EXPAND,0)
         self.SetSizer(self.mainbox)
 
     def SetEvent(self):
-        pass
+        self.Bind(wx.EVT_BUTTON,self.OnClose,self.button_close)
 
     def InitData(self):
         memos = self.controller.memos;
         for memo in memos:
             self.vbox.Add(self.MemoNode(memo,parent=self), 1, wx.TOP|wx.BOTTOM, 5)
 
+    def OnClose(self,evt):
+        self.Close()
+
+    def DeleteMemoNode(self,target):
+        self.vbox.Remove(target)
+        self.mainbox.Fit(self)
 
 
     class MemoNode(wx.Panel):
         def __init__(self,memo,parent=None,id=-1):
             wx.Panel.__init__(self, parent, id)
 
+            self.parent = parent
+
             self.on_modifying = False
             self.memo = memo
             self.hbox = wx.BoxSizer(wx.HORIZONTAL)
             self.text_title = wx.TextCtrl(self, -1, "", style=wx.NO_BORDER|wx.TE_PROCESS_ENTER)
-            self.button_modify = wx.Button(self, -1, "M")
-            self.button_isopen = wx.Button(self, -1, "O")
-            self.button_delete = wx.Button(self, -1, "D")
+#            self.button_modify = wx.Button(self, -1, "M")
+#            self.button_isopen = wx.Button(self, -1, "O")
+#            self.button_delete = wx.Button(self, -1, "D")
+            self.button_modify = wx.Button(self, -1, "수정")
+            self.button_isopen = wx.Button(self, -1, "열림")
+            self.button_delete = wx.Button(self, -1, "삭제")
 
             self.__set_properties()
             self.__do_layout()
@@ -210,9 +217,12 @@ class MemoList(wx.Frame):
             self.text_title.SetMinSize((200, 23))
 #            self.text_title.Enable(False)
             self.text_title.SetEditable(False)
-            self.button_modify.SetMinSize((25, 25))
-            self.button_isopen.SetMinSize((25, 25))
-            self.button_delete.SetMinSize((25, 25))
+#            self.button_modify.SetMinSize((25, 25))
+#            self.button_isopen.SetMinSize((25, 25))
+#            self.button_delete.SetMinSize((25, 25))
+            self.button_modify.SetMinSize((40, 25))
+            self.button_isopen.SetMinSize((40, 25))
+            self.button_delete.SetMinSize((40, 25))
         
         def __do_layout(self):
             self.hbox.Add(self.text_title, 0, wx.LEFT|wx.RIGHT, 5)
@@ -251,7 +261,7 @@ class MemoList(wx.Frame):
                 if len(self.text_title.GetValue()) > 0:
                     self.memo.set_title(self.text_title.GetValue())
                     self.memo.save_memo()
-                    self.button_modify.SetLabel("M")
+                    self.button_modify.SetLabel("수정")
                     self.on_modifying = False
                     self.text_title.SetEditable(False)
 
@@ -268,15 +278,19 @@ class MemoList(wx.Frame):
         def OnButtonDelete(self,evt):
             ''' 이 메모를 서버에서 삭제하고 프로그램에서도 지운다 '''
             print "delete"
+            self.parent.controller.memos.remove(self.memo)
+            self.memo.delete_memo()
+            self.parent.DeleteMemoNode(self)
+
 
         def SetText(self,str):
             self.text_title.SetValue(str)
 
         def CheckIsOpen(self):
             if self.memo.header.is_open:
-                self.button_isopen.SetLabel("O")
+                self.button_isopen.SetLabel("열림")
             else:
-                self.button_isopen.SetLabel("X")
+                self.button_isopen.SetLabel("닫힘")
 
 
 
@@ -438,7 +452,8 @@ class Note(wx.Frame):
         hbox.Add(self.button_close,0,wx.EXPAND,0)
 
 # vbox
-        self.mainpanel = wx.Panel(self,ID_PANEL_MAINPANEL)
+#        self.mainpanel = wx.Panel(self,ID_PANEL_MAINPANEL)
+        self.mainpanel = wx.Panel(self,-1)
         vbox.Add(hbox,0,wx.EXPAND|wx.TOP,0)
         vbox.Add(self.mainpanel,1,wx.EXPAND|wx.ALL,0)
 

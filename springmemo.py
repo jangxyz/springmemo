@@ -112,6 +112,7 @@ class SpringMemo:
         self.memos.append(memo)
         return memo
 
+
     def init_all_memos(self):
         ''' Root페이지와 하부 모든 페이지를 가져온다 '''
         pages = springnote_client.Page.get_all_pages(self.rootmemo)
@@ -164,6 +165,12 @@ class Memo:
         self.header.is_open = False
         self.save_memo()
 
+    def delete_memo(self):
+        if self.view.IsShown():
+            self.view.Close()
+        self.view.Destroy()
+        self.page.delete_page()
+        
 
     def get_save_source(self,view=None,header=None):
         ''' self.view의 데이터를 시리얼라이즈 하여(self.view.serialize?)

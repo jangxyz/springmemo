@@ -404,6 +404,8 @@ class Page:
 
         self.update_page()
 
+    def delete_page(self):
+        Page.client.delete_page(self.identifier)
 
     def update_page(self):
         ''' Page.client를 이용해 자신의 데이터를 저장한다. '''
