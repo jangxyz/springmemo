@@ -356,37 +356,37 @@ class SelectNoteDlg(wx.Dialog):
 
 ### Move Panel ####
 
-    class MovePanel(wx.Panel):
-        def __init__(self,parent,pos,size,style):
-            wx.Panel.__init__(self,parent,-1,pos=pos,size=size,style=style)
-            self.left_down = False
-            self.parentFrame = parent
+class MovePanel(wx.Panel):
+    def __init__(self,parent,pos,size,style):
+        wx.Panel.__init__(self,parent,-1,pos=pos,size=size,style=style)
+        self.left_down = False
+        self.parentFrame = parent
 
-            while self.parentFrame.GetParent() is not None:
-                self.parentFrame = self.parentFrame.GetParent()
+        while self.parentFrame.GetParent() is not None:
+            self.parentFrame = self.parentFrame.GetParent()
 
-            self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
-            self.Bind(wx.EVT_LEFT_UP, self.OnLeftUp)
-            self.Bind(wx.EVT_MOTION, self.OnMouseMove)
+        self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
+        self.Bind(wx.EVT_LEFT_UP, self.OnLeftUp)
+        self.Bind(wx.EVT_MOTION, self.OnMouseMove)
 
-        def OnLeftDown(self, evt):
-            self.CaptureMouse()
-            self.left_down = True
+    def OnLeftDown(self, evt):
+        self.CaptureMouse()
+        self.left_down = True
+        pos = self.ClientToScreen(evt.GetPosition())
+        origin = self.parentFrame.GetPosition()
+        dx = pos.x - origin.x
+        dy = pos.y - origin.y
+        self.delta = wx.Point(dx, dy)
+
+    def OnLeftUp(self, evt):
+        self.ReleaseMouse()
+        self.left_down = False
+
+    def OnMouseMove(self, evt):
+        if evt.Dragging() and self.left_down:
             pos = self.ClientToScreen(evt.GetPosition())
-            origin = self.parentFrame.GetPosition()
-            dx = pos.x - origin.x
-            dy = pos.y - origin.y
-            self.delta = wx.Point(dx, dy)
-
-        def OnLeftUp(self, evt):
-            self.ReleaseMouse()
-            self.left_down = False
-
-        def OnMouseMove(self, evt):
-            if evt.Dragging() and self.left_down:
-                pos = self.ClientToScreen(evt.GetPosition())
-                fp = (pos.x - self.delta.x, pos.y - self.delta.y)
-                self.parentFrame.Move(fp)
+            fp = (pos.x - self.delta.x, pos.y - self.delta.y)
+            self.parentFrame.Move(fp)
 
 ### End Move Panel ####
 

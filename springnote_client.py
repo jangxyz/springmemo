@@ -333,7 +333,9 @@ class Page:
             if attr_name in page_dict:
                 result[attr_name] = page_dict[attr_name]
 
-        return json.dumps({'page':result})
+#        return json.dumps({'page':result})
+        json_ustr = json.dumps({'page':result},ensure_ascii=False)
+        return json_ustr.encode('utf-8')
 
    
    
