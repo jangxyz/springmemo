@@ -18,10 +18,7 @@ COLOR_220 = wx.Colour(220,220,220)
 class NoteTaskBar(wx.TaskBarIcon):
     def __init__(self,controller=None):
         wx.TaskBarIcon.__init__(self)
-#        icon = wx.Icon('./icons2/task_purple25.ico', wx.BITMAP_TYPE_ICO,25,25)
         icon = wx.Icon('./icons2/task_purple25.ico', wx.BITMAP_TYPE_ANY,25,25)
-#        icon.SetWidth(25)
-#        icon.SetHeight(25)
         self.SetIcon(icon,"springmemo")
         self.initMenu()
         self.select_memo = None
@@ -49,7 +46,6 @@ class NoteTaskBar(wx.TaskBarIcon):
 
     def OnTaskBarRight(self,event):
         self.PopupMenu(self.menu)
-        print 'aaaa'
 
     def OnNew(self,event):
         if self.select_memo == None:
@@ -107,17 +103,11 @@ class AuthDialog(wx.Dialog):
         self.Bind(wx.EVT_CHECKBOX,self.OnCheck,self.checkbox_issave)
 
     def __set_properties(self):
-        # begin wxGlade: MyDialog1.__set_properties
-#        self.SetTitle("SpringMemo 인증창")
-#        self.SetSize((400, 350))
-#        self.bitmap_guide.SetMinSize((400, 300))
         self.SetSize((600, 450))
         self.bitmap_guide.SetMinSize((600, 400))
         self.button_ok.Enable(False)
-        # end wxGlade
 
     def __do_layout(self):
-        # begin wxGlade: MyDialog1.__do_layout
         sizer_2 = wx.BoxSizer(wx.VERTICAL)
         sizer_3 = wx.BoxSizer(wx.HORIZONTAL)
         sizer_2.Add(self.bitmap_guide, 0, 0, 0)
@@ -128,7 +118,6 @@ class AuthDialog(wx.Dialog):
         sizer_2.Add(sizer_3, 1, wx.ALL|wx.EXPAND|wx.ALIGN_CENTER_HORIZONTAL|wx.ALIGN_CENTER_VERTICAL, 10)
         self.SetSizer(sizer_2)
         self.Layout()
-        # end wxGlade
 
 
     def OnGoAuth(self,evt):
@@ -136,7 +125,6 @@ class AuthDialog(wx.Dialog):
         webbrowser.open_new(self.auth_url)
         self.is_auth_clicked = True
         self.button_ok.Enable(True)
-#        print "i opened : %s" % self.auth_url
 
     def OnOk(self,evt):
         if self.is_auth_clicked:
@@ -785,10 +773,8 @@ class CustTableGrid(wx.grid.Grid):
             self.EnableCellEditControl()
 
     def OnCellChange(self, evt):
-        #print evt.GetRow()
         if(len(self.table.data) == evt.GetRow()+1):
             self.table.data.append([False,'',1])
-        #print self.table.data
 
 
 
@@ -830,7 +816,6 @@ class TodoNote(Note):
     def OnChange(self, evt):
         self.SetStatusModified()
         self.StartTimer()
-        print "changed!"
 
     #d source -> body
     def GetBodyFromSource(self, source):
@@ -869,7 +854,6 @@ class TodoNote(Note):
         rval = ""
         for item in self.grid.table.data:
             rval += "[" + str(item[0]) + "], " + item[1] + ", (" + str(item[2]) + ")\n"
-        print rval
         return rval
 
 
