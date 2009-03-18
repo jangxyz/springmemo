@@ -22,18 +22,6 @@ class SpringnoteClient:
     DEFAULT_ROOT_TAG = u'springmemorootpage'
     DEFAULT_ROOT_TITLE = u'SpringMemo 최상위 페이지입니다'
  
-#### useless method
-    def print_client(self):
-        print "::::::::: print client ::::::::"
-        print " consumer :: %s" % self.consumer
-        print " consumer key :: %s" % self.consumer.secret
-        print " consumer secret :: %s" % self.consumer.key
-        print " access :: %s" % self.access_token
-        print " access key :: %s" % self.access_token.key
-        print " access secret :: %s" % self.access_token.secret
-        print " signature_method :: %s" % self.signature_method
-        print "::::::::: print client finished ::::::::"
-##############3
 
     def __init__(self):
         self.consumer = oauth.OAuthConsumer(self.CONSUMER_TOKEN, self.CONSUMER_TOKEN_SECRET)

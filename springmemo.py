@@ -140,11 +140,12 @@ class SpringMemo:
         
 
 class Memo:
-    def __init__(self, view=None, page=None, header=None):
+    def __init__(self, view=None, page=None, header=None, pos=None):
         self.view = view
         self.page = page
 #        self.type = type       ?? 필요한가 ??
         self.header = header
+        self.pos = pos
 
     @staticmethod
     def create(type=None,title=None,rel=None,tags=None):
@@ -165,13 +166,15 @@ class Memo:
             (page.source에 저장,)
             Page에서 저장하는 방식.. 
         '''
+        self.header.set_pos(self.view.GetPos())
         source = self.get_save_source()
-        print "source :: %s" % source
+#        print "source :: %s" % source
 
         self.page.save_page(source=source)
 
     def close_memo(self):
         self.header.is_open = False
+
         self.save_memo()
 
     def delete_memo(self):
@@ -205,6 +208,7 @@ class Memo:
 #        if header.is_open == True: #열린상태일때만 생김
 #            memo.view = memo.get_view(header.type,page.title)
         memo.view = memo.get_view(header.type,page.title) #무조건 생김
+        memo.view.SetPos(wx.Point(header.x,header.y))
         return memo
 
     def set_title(self,title):
@@ -212,10 +216,12 @@ class Memo:
         self.page.title = title
 
     def get_view(self,type,title,is_open=True,parent=None,id=-1):
-        print "type :: %d" % type
+#        print "type :: %d" % type
         if type == MEMO_TYPE_NORMAL:
             view = notegui.NormalNote(parent,id,title,self)
-        print "type : %d" % type
+        if type == MEMO_TYPE_TODO:
+            view = notegui.TodoNote(parent,id,title,self)
+#        print "type : %d" % type
         return view
 
 
@@ -233,19 +239,28 @@ class PageHeader:
     typeset = {
             'is_open': lambda x: (x == "False" and False)\
                     or (x == "True" and True),
-            'type': int
+            'type': int,
+            'x': int,
+            'y': int
             }
-    attrset = ['is_open','type']
+    attrset = ['is_open', 'type', 'x', 'y']
 
-    def __init__(self,type=None,is_open=True):
+    def __init__(self,type=None,is_open=True,pos=None):
 #        self.is_open = None
-#        for attr_name in PageHeader.attrset:
-#            setattr(self, attr_name, None)
+        for attr_name in PageHeader.attrset:
+            setattr(self, attr_name, None)
         if type:
             self.type = type
         if is_open:
             self.is_open = True
+        if not pos:
+            defpos = wx.GetDisplaySize()
+            self.x = defpos.x / 2
+            self.y = defpos.y / 2
 
+    def set_pos(self,pos):
+        self.x = pos.x
+        self.y = pos.y
     def make_source_from_header(self):
         source = ""
         for attr_name in PageHeader.attrset:
@@ -263,7 +278,7 @@ class PageHeader:
         ph = PageHeader()
         header_text = PageHeader.re_find_header.findall(source)
         attrs = PageHeader.re_get_all_attrs.findall(header_text[0])
-        print attrs
+#        print attrs
 
         for attrset in attrs:
             setattr(ph,attrset[0],PageHeader.typeset[attrset[0]](attrset[1]))

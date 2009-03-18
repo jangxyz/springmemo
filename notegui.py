@@ -18,9 +18,10 @@ COLOR_220 = wx.Colour(220,220,220)
 class NoteTaskBar(wx.TaskBarIcon):
     def __init__(self,controller=None):
         wx.TaskBarIcon.__init__(self)
-        icon = wx.Icon('./nicotine2.ico', wx.BITMAP_TYPE_ICO,25,25)
+#        icon = wx.Icon('./nicotine2.ico', wx.BITMAP_TYPE_ICO,25,25)
+        icon = wx.Icon('./icons2/task_purple25.ico', wx.BITMAP_TYPE_ICO,50,50)
         icon.SetWidth(25)
-        icon.SetHeight(25)
+#        icon.SetHeight(25)
         self.SetIcon(icon,"springmemo")
         self.initMenu()
         self.select_memo = None
@@ -256,7 +257,7 @@ class MemoList(wx.Frame):
                 if len(self.text_title.GetValue()) > 0:
                     self.memo.set_title(self.text_title.GetValue())
                     self.memo.save_memo()
-                    self.text_title.SetBackgroundColour(wx.Colour(245,245,245))
+                    self.text_title.SetBackgroundColour(COLOR_245)
                     self.button_modify.SetLabel(u"수정")
                     self.on_modifying = False
                     self.text_title.SetEditable(False)
@@ -304,6 +305,7 @@ class ConfigDlg(wx.Dialog):
     def __set_properties(self):
 #        self.SetSize((310, 150))
 #        self.text_title.SetMinSize((200, 23))
+        self.SetBackgroundColour(COLOR_240)
         self.checkbox_auth_save.SetValue(self.is_auth_save)
 
     def __do_layout(self):
@@ -396,7 +398,6 @@ class SelectNoteDlg(wx.Dialog):
 
 
     def OnRadioChanged(self,evt):
-#        print "changed. %s" % self.radio_type.GetSelection()
         self.selected_type = self.radio_type.GetSelection()
 
     def OnOk(self,evt):
@@ -458,7 +459,6 @@ class MovePanel(wx.Panel):
 
 class TitleBar(wx.Panel):
     def __init__(self,parent=None,id=-1,title=None):
-#        wx.Panel.__init__(self,parent,id,style=wx.SIMPLE_BORDER)
         wx.Panel.__init__(self,parent,id,style=wx.NO_BORDER)
         self.SetBackgroundColour(COLOR_230)
         self.parentFrame = parent
@@ -476,7 +476,6 @@ class TitleBar(wx.Panel):
         self.title.SetLabel(title)
 
     def __do_layout(self):
-
         self.titlebox.Add(self.panel_move,0,wx.EXPAND,1)
         self.titlebox.Add(self.title,1,wx.EXPAND|wx.LEFT|wx.TOP,5)
         self.titlebox.Add(self.button_close,0,wx.EXPAND,0)
@@ -488,7 +487,6 @@ class TitleBar(wx.Panel):
         self.Bind(wx.EVT_BUTTON,self.OnClose,self.button_close)
 
     def OnClose(self,evt):
-#        print "parent : %s" % self.parentFrame
         self.parentFrame.Close()
 
 
@@ -499,12 +497,12 @@ class TitleBar(wx.Panel):
 class Note(wx.Frame):
     re_get_body = re.compile("<div[^>]*?id=\"body\"[^>]*?>(.*?)</div>",re.M|re.I|re.U|re.S)
 
-
-
     def __init__(self,parent,id,title,memo):
         self.memo = memo
         self.body = None        #실제 데이터를 serialize한 값? 최신 값
         self.is_modified = False
+
+        self.pos = wx.Point(0,0)
 
         self.delta = wx.Point(0,0)
 
@@ -513,6 +511,18 @@ class Note(wx.Frame):
 
         self.initTitle(title)
         self.CheckShowNote()
+
+    def SetPos(self,pos):
+        self.pos = pos
+        defpos = wx.GetDisplaySize()
+#        print "defx : %d, pos : %d" % (defpos.x, self.pos.x)
+        self.SetPosition((defpos.x-self.pos.x,self.pos.y))
+
+    def GetPos(self):
+        pos = self.GetPosition()
+        defpos = wx.GetDisplaySize()
+        pos.x = defpos.x - pos.x
+        return pos
 
     def initTitle(self,str):
         self.title.SetLabel(str)
@@ -545,7 +555,6 @@ class Note(wx.Frame):
 
 
 # vbox
-#        self.mainpanel = wx.Panel(self,ID_PANEL_MAINPANEL)
         self.mainpanel = wx.Panel(self,-1)
         vbox.Add(hbox,0,wx.EXPAND|wx.TOP,0)
         vbox.Add(self.mainpanel,1,wx.EXPAND|wx.ALL,0)
@@ -568,7 +577,6 @@ class Note(wx.Frame):
 
     def OnTimerEvent(self,evt):
         ''' 자동 저장 부분 '''
-        print "event finished"
         self.StopTimer()
         self.UpdateNote()
         self.SetStatusRecent()
@@ -622,14 +630,10 @@ class Note(wx.Frame):
         self.memo.save_memo()
 
     def CloseNote(self):
-#        self.Close()
         self.Show(False)
         self.memo.close_memo()
-#        self.CheckShowNote()
 
     def CheckShowNote(self,val=None):
-#        if self.memo.header.is_open:
-#            self.Show(True)
         if val != None:
             self.Show(val)
         else:
@@ -637,7 +641,6 @@ class Note(wx.Frame):
 
 
 class NormalNote(Note):
-    ID_TEXT = 2
 
     def __init__(self,parent,id,title,memo=None):
         Note.__init__(self,parent,id,title,memo)
@@ -648,8 +651,9 @@ class NormalNote(Note):
     def initCustomGUI(self):
         ''' for overriding '''
         custombox = wx.BoxSizer(wx.HORIZONTAL)
-        self.text = wx.TextCtrl(self.mainpanel,NormalNote.ID_TEXT,pos=(0,0),style=wx.TE_MULTILINE,name="text")
+        self.text = wx.TextCtrl(self.mainpanel,-1,pos=(0,0),style=wx.TE_MULTILINE,name="text")
         self.text.SetBackgroundColour(COLOR_240)
+        self.text.SetSize((195,220))
 
         custombox.Add(self.text,1,wx.EXPAND,1)
         self.mainpanel.SetSizer(custombox)
@@ -664,12 +668,12 @@ class NormalNote(Note):
 
 
     def SetChangeState(self):
-        self.Bind(wx.EVT_TEXT,self.OnChange,id=NormalNote.ID_TEXT)
+        self.Bind(wx.EVT_TEXT,self.OnChange,self.text)
     
     def OnChange(self,evt):
         self.SetStatusModified()
         self.StartTimer()
-        print "mmm"
+#        print "mmm"
 
     def GetBodyFromSource(self,source):
         ''' source값을 변경하여 현재 body를 채운다
@@ -677,7 +681,6 @@ class NormalNote(Note):
         body = Note.re_get_body.findall(source)[0]
         re_replace1 = re.compile("<p>(.*?)</p>",re.M|re.I|re.U|re.S)
         body2 = re_replace1.sub('\g<1>\n',body)
-#        print "changed body ::::::::%s" % body2
 
         return body2
 
@@ -697,6 +700,177 @@ class NormalNote(Note):
     
     def GetBody(self):
         return self.text.GetValue()
+
+class CustomDataTable(wx.grid.PyGridTableBase):
+    
+    def __init__(self):
+        wx.grid.PyGridTableBase.__init__(self)
+
+        self.colLabels = ['check','todo','property']
+        self.dataTypes = [wx.grid.GRID_VALUE_BOOL,wx.grid.GRID_VALUE_STRING,wx.grid.GRID_VALUE_NUMBER+':1,5',]
+        self.data = [
+            [True,"insert todo here",3],
+        ]
+
+    def GetNumberRows(self):
+        return len(self.data)
+
+    def GetNumberCols(self):
+        return len(self.data[0])
+
+    def IsEmptyCell(self, row, col):
+        try:
+            return not self.data[row][col]
+        except IndexError:
+            return True
+
+    def GetValue(self, row, col):
+        try:
+            return self.data[row][col]
+        except IndexError:
+            return ''
+
+    def SetValue(self, row, col, value):
+        try:
+            self.data[row][col] = value
+        except IndexError:
+            self.data.append([''] * self.GetNumberCols())
+            self.SetValue(row, col, value)
+
+            msg = wx.grid.GridTableMessage(self,wx.grid.GRIDTABLE_NOTIFY_ROWS_APPENDED, 1)
+            self.GetView().ProcessTableMessage(msg)
+
+    def GetColLabelValue(self, col):
+        return self.colLabels[col]
+
+    def GetTypeName(self, row, col):
+        return self.dataTypes[col]
+
+    def CanGetValueAs(self, row, col, typeName):
+        colType = self.dataTypes[col].split(':')[0]
+        if typeName == colType:
+            return True
+        else:
+            return False
+
+    def CanSetValueAs(self, row, col, typeName):
+        return self.CanGetValueAs(row, col, typeName)
+
+
+
+
+
+class CustTableGrid(wx.grid.Grid):
+    
+    def __init__(self, parent):
+        wx.grid.Grid.__init__(self, parent, -1)
+
+        panel = parent
+        self.table = CustomDataTable()
+
+        self.SetTable(self.table, True)
+
+        self.SetRowLabelSize(0)
+        self.SetColLabelSize(20)
+        self.SetMargins(0,0)
+        self.AutoSizeColumns(True)
+
+        wx.grid.EVT_GRID_CELL_LEFT_DCLICK(self, self.OnLeftDClick)
+        wx.grid.EVT_GRID_CELL_CHANGE(self, self.OnCellChange)
+
+    def OnLeftDClick(self, evt):
+        if self.CanEnableCellControl():
+            self.EnableCellEditControl()
+
+    def OnCellChange(self, evt):
+        #print evt.GetRow()
+        if(len(self.table.data) == evt.GetRow()+1):
+            self.table.data.append([False,'',1])
+        #print self.table.data
+
+
+
+
+
+class TodoNote(Note):
+    ID_TEXT = 3
+
+    #d TodoNote 초기화
+    def __init__(self, parent, id, title, memo=None):
+        Note.__init__(self,parent,id,title,memo)
+        self.initCustomGUI()
+        self.initData()
+        self.SetChangeState()
+
+    #d GUI 설정
+    def initCustomGUI(self):
+        '''for overriding'''
+        custombox = wx.BoxSizer(wx.HORIZONTAL)
+        self.grid = CustTableGrid(self.mainpanel)
+        custombox.Add(self.grid,1,wx.EXPAND,1)
+        self.mainpanel.SetSizer(custombox)
+        self.Layout()
+
+    #d DATA 초기화
+    def initData(self):
+        '''memo로부터 넘어온 page.source를 이용해 실제 serialize된 데이터를
+        parsing 한다'''
+        if self.memo.page:
+            self.body = self.GetBodyFromSource(self.memo.page.source)
+            self.SetBody(self.body)
+
+    #d 상태 변화 감지
+    def SetChangeState(self):
+        self.Bind(wx.grid.EVT_GRID_CELL_CHANGE,self.OnChange,id=TodoNote.ID_TEXT)
+
+
+    #d 상태 변화시
+    def OnChange(self, evt):
+        self.SetStatusModified()
+        self.StartTimer()
+        print "changed!"
+
+    #d source -> body
+    def GetBodyFromSource(self, source):
+        '''source값을 변경하여 현재 body를 채운다.
+        <p>(.*?)</p>로 감싼부분을 (.*?)\n로 바꿔준다.'''
+        body = Note.re_get_body.findall(source)[0]
+        re_replace1 = re.compile("<p>(.*?)</p>",re.M|re.I|re.U|re.S)
+        body2 = re_replace1.sub('\g<1>\n', body)
+        
+        return body2
+
+    #d 데이터 그대로 쓰기 (serialize)
+    def SerializeBody(self):
+        rval = ""
+        str = self.GetBody()
+        arr = str.split('\n')
+        for str2 in str.split('\n'):
+            rval += "<p>" + str2 + "</p>"
+
+        body = "<div id=\"body\">" + rval + "</div>"
+        return body
+
+    # 내용 쓰기 
+    def SetBody(self, str):
+        arr = str.split('\n')
+        for item in arr:
+            list = []
+            token = item.split(',')
+            list.append(token[0][1:-1][0] == "T")
+            list.append(token[1])
+            list.append(int(token[2]))
+            self.grid.table.data.append(list)
+
+    # 내용 읽기
+    def GetBody(self):
+        rval = ""
+        for item in self.grid.table.data:
+            rval += "[" + str(item[0]) + "], " + item[1] + ", (" + str(item[2]) + ")\n"
+        print rval
+        return rval
+
+
 
 
 
