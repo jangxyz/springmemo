@@ -55,12 +55,20 @@ class SpringMemo:
             return True
         return False
 
-    def save_user_file(self,access_token):
+    def save_user_file(self,key,secret):
         user_file = file(DEFAULT_FILE_NAME,'w')
-        user_file.write(access_token.key + '\n')
-        user_file.write(access_token.secret + '\n')
+        user_file.write(key + '\n')
+        user_file.write(secret + '\n')
         user_file.close()
 
+    def delete_user_file(self):
+        os.remove(DEFAULT_FILE_NAME)
+
+    def check_auth_save(self,):
+        if self.is_auth_save:
+            self.save_user_file(self.access_token,self.access_token_secret)
+        else:
+            self.delete_user_file()
 
 
     def user_authorize(self):
@@ -90,7 +98,7 @@ class SpringMemo:
                     else:
                         self.is_auth_save = self.authdialog.is_auth_save
                         if self.is_auth_save:
-                            self.save_user_file(access_token=access_token)
+                            self.save_user_file(access_token.key,access_token.secret)
                         confirmed = True
                         self.authdialog.Destroy()
 
@@ -207,6 +215,7 @@ class Memo:
         print "type :: %d" % type
         if type == MEMO_TYPE_NORMAL:
             view = notegui.NormalNote(parent,id,title,self)
+        print "type : %d" % type
         return view
 
 

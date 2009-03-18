@@ -18,6 +18,7 @@ class NoteTaskBar(wx.TaskBarIcon):
         self.initMenu()
         self.select_memo = None
         self.memo_list = None
+        self.configdlg = None
         self.controller = controller
 
     def initMenu(self):
@@ -58,7 +59,15 @@ class NoteTaskBar(wx.TaskBarIcon):
         self.memo_list = MemoList(None,-1,"",self.controller)
 
     def OnConfig(self,event):
-        print 'config'
+        if self.configdlg == None:
+            self.configdlg = ConfigDlg(None,-1,u"환경설정",self.controller.is_auth_save)
+            rval = self.configdlg.ShowModal()
+            if rval == wx.ID_OK:
+                self.controller.is_auth_save = self.configdlg.is_auth_save
+                self.controller.check_auth_save()
+
+            self.configdlg.Destroy()
+                
 
     def OnQuit(self,event):
         self.controller.quit_app()
@@ -72,7 +81,8 @@ class AuthDialog(wx.Dialog):
         self.is_auth_clicked = False
         self.auth_url = auth_url
         self.is_auth_save = False
-        self.bitmap_guide = wx.StaticBitmap(self, -1, wx.Bitmap(u"/home/looca/바탕화면/springmemo전체구조.png", wx.BITMAP_TYPE_ANY))
+#        self.bitmap_guide = wx.StaticBitmap(self, -1, wx.Bitmap(u"/home/looca/바탕화면/springmemo전체구조.png", wx.BITMAP_TYPE_ANY))
+        self.bitmap_guide = wx.StaticBitmap(self, -1, wx.Bitmap(u"guide_image.png", wx.BITMAP_TYPE_ANY))
         self.button_goauth = wx.Button(self, -1, u"인증하러 가기")
         self.button_ok = wx.Button(self, -1, u"다음으로")
         self.button_quit = wx.Button(self, -1, u"종료")
@@ -90,8 +100,10 @@ class AuthDialog(wx.Dialog):
     def __set_properties(self):
         # begin wxGlade: MyDialog1.__set_properties
 #        self.SetTitle("SpringMemo 인증창")
-        self.SetSize((400, 350))
-        self.bitmap_guide.SetMinSize((400, 300))
+#        self.SetSize((400, 350))
+#        self.bitmap_guide.SetMinSize((400, 300))
+        self.SetSize((600, 450))
+        self.bitmap_guide.SetMinSize((600, 400))
         self.button_ok.Enable(False)
         # end wxGlade
 
@@ -265,6 +277,56 @@ class MemoList(wx.Frame):
                 self.button_isopen.SetLabel(u"열림")
             else:
                 self.button_isopen.SetLabel(u"닫힘")
+
+class ConfigDlg(wx.Dialog):
+    def __init__(self,parent,id,title,is_auth_save):
+        # begin wxGlade: MyDialog.__init__
+        wx.Dialog.__init__(self, parent, id, title,style=wx.NO_BORDER)
+        self.is_auth_save = is_auth_save
+        self.checkbox_auth_save = wx.CheckBox(self, -1, u"인증 저장")
+        self.button_ok = wx.Button(self, -1, u"확인")
+        self.button_cancel = wx.Button(self, -1, u"취소")
+        self.titlebar = TitleBar(self,-1,title)
+
+        self.__set_properties()
+        self.__do_layout()
+        self.SetEvent()
+        # end wxGlade
+
+    def __set_properties(self):
+#        self.SetSize((310, 150))
+#        self.text_title.SetMinSize((200, 23))
+        self.checkbox_auth_save.SetValue(self.is_auth_save)
+
+    def __do_layout(self):
+        # begin wxGlade: MyDialog.__do_layout
+        sizer_3 = wx.BoxSizer(wx.VERTICAL)
+        sizer_4 = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_3.Add(self.titlebar,0,wx.EXPAND,0)
+        sizer_3.Add(self.checkbox_auth_save, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 10)
+        sizer_4.Add(self.button_ok, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL|wx.ALIGN_CENTER_VERTICAL, 10)
+        sizer_4.Add(self.button_cancel, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL|wx.ALIGN_CENTER_VERTICAL, 10)
+        sizer_3.Add(sizer_4, 1, wx.ALL|wx.EXPAND|wx.ALIGN_CENTER_HORIZONTAL|wx.ALIGN_CENTER_VERTICAL, 10)
+        self.SetSizer(sizer_3)
+        sizer_3.Fit(self)
+        self.Layout()
+        # end wxGlade
+
+
+    def SetEvent(self):
+        self.Bind(wx.EVT_CHECKBOX,self.OnCheckChanged,self.checkbox_auth_save)
+        self.Bind(wx.EVT_BUTTON,self.OnOk,self.button_ok)
+        self.Bind(wx.EVT_BUTTON,self.OnCancel,self.button_cancel)
+
+    def OnCheckChanged(self,evt):
+        self.is_auth_save = self.checkbox_auth_save.GetValue()
+
+    def OnOk(self,evt):
+        self.EndModal(wx.ID_OK)
+
+    def OnCancel(self,evt):
+        self.EndModal(wx.ID_CANCEL)
+
 
 
 

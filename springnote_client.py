@@ -6,8 +6,10 @@ import lib.json as json
 from datetime import datetime
 
 class SpringnoteClient:
-    CONSUMER_TOKEN = "wpRiJvvQy624FayfQ6Q"
-    CONSUMER_TOKEN_SECRET = "GHY2La7yR2moQUXO2ETiuuiAtqFCCa37bO6uAXC6Yw"
+#    CONSUMER_TOKEN = "wpRiJvvQy624FayfQ6Q"
+#    CONSUMER_TOKEN_SECRET = "GHY2La7yR2moQUXO2ETiuuiAtqFCCa37bO6uAXC6Yw"
+    CONSUMER_TOKEN = "al8kiqVKqlpIwZBDBwI4WA"
+    CONSUMER_TOKEN_SECRET = "SpdStIpIvw16A0R3KPuAaoUPceazM61h4nOjS8GM"
 
     SPRINGNOTE_PROTOCOL = 'http'
     SPRINGNOTE_SERVER = 'api.springnote.com'
