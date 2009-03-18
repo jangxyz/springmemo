@@ -8,6 +8,13 @@ import webbrowser
 
 DEFAULT_TIMER_TIME = 5000
 
+COLOR_245 = wx.Colour(245,245,245)
+COLOR_240 = wx.Colour(240,240,240)
+COLOR_230 = wx.Colour(230,230,230)
+COLOR_220 = wx.Colour(220,220,220)
+
+
+
 class NoteTaskBar(wx.TaskBarIcon):
     def __init__(self,controller=None):
         wx.TaskBarIcon.__init__(self)
@@ -81,7 +88,8 @@ class AuthDialog(wx.Dialog):
         self.is_auth_clicked = False
         self.auth_url = auth_url
         self.is_auth_save = False
-#        self.bitmap_guide = wx.StaticBitmap(self, -1, wx.Bitmap(u"/home/looca/바탕화면/springmemo전체구조.png", wx.BITMAP_TYPE_ANY))
+
+        self.SetBackgroundColour(COLOR_240)
         self.bitmap_guide = wx.StaticBitmap(self, -1, wx.Bitmap(u"guide_image.png", wx.BITMAP_TYPE_ANY))
         self.button_goauth = wx.Button(self, -1, u"인증하러 가기")
         self.button_ok = wx.Button(self, -1, u"다음으로")
@@ -146,7 +154,7 @@ class MemoList(wx.Frame):
     def __init__(self,parent=None,id=-1,title=None,controller=None):
         self.controller = controller
         wx.Frame.__init__(self, parent, id, title, style=wx.NO_BORDER)
-        self.SetBackgroundColour(wx.Colour(240,240,240))
+        self.SetBackgroundColour(COLOR_240)
         self.titlebar = TitleBar(self, -1, u"메모 목록")
 
         self.__set_properties()
@@ -191,8 +199,8 @@ class MemoList(wx.Frame):
             self.memo = memo
             self.hbox = wx.BoxSizer(wx.HORIZONTAL)
             self.text_title = wx.TextCtrl(self, -1, "", style=wx.NO_BORDER|wx.TE_PROCESS_ENTER)
-            self.SetBackgroundColour(wx.Colour(240,240,240))
-            self.text_title.SetBackgroundColour(wx.Colour(245,245,245))
+            self.SetBackgroundColour(COLOR_240)
+            self.text_title.SetBackgroundColour(COLOR_245)
             self.button_modify = wx.Button(self, -1, u"수정")
             self.button_isopen = wx.Button(self, -1, u"열림")
             self.button_delete = wx.Button(self, -1, u"삭제")
@@ -334,7 +342,7 @@ class SelectNoteDlg(wx.Dialog):
     def __init__(self,parent,id,title):
         # begin wxGlade: MyDialog1.__init__
         wx.Dialog.__init__(self, parent, id, title,style=wx.NO_BORDER)
-        self.SetBackgroundColour(wx.Colour(240,240,240))
+        self.SetBackgroundColour(COLOR_240)
         self.radio_type = wx.RadioBox(self, -1, u"종류", choices=[u"기본노트", u"To-do", u"캘린더"], majorDimension=3, style=wx.RA_SPECIFY_COLS)
         self.label_1 = wx.StaticText(self, -1, u"제목")
         self.text_title = wx.TextCtrl(self, -1, "")
@@ -415,7 +423,7 @@ class MovePanel(wx.Panel):
         wx.Panel.__init__(self,parent,-1,pos=pos,size=size,style=style)
         self.left_down = False
         self.parentFrame = parent
-        self.SetBackgroundColour(wx.Colour(220,220,220))
+        self.SetBackgroundColour(COLOR_220)
 
         while self.parentFrame.GetParent() is not None:
             self.parentFrame = self.parentFrame.GetParent()
@@ -452,7 +460,7 @@ class TitleBar(wx.Panel):
     def __init__(self,parent=None,id=-1,title=None):
 #        wx.Panel.__init__(self,parent,id,style=wx.SIMPLE_BORDER)
         wx.Panel.__init__(self,parent,id,style=wx.NO_BORDER)
-        self.SetBackgroundColour(wx.Colour(230,230,230))
+        self.SetBackgroundColour(COLOR_230)
         self.parentFrame = parent
 
         while self.parentFrame.GetParent() is not None:
@@ -515,7 +523,7 @@ class Note(wx.Frame):
 
     def initGUI(self,parent,id,title=""):
         wx.Frame.__init__(self,parent,id,title,size=(200,250),style=wx.NO_BORDER)
-        self.SetBackgroundColour(wx.Colour(230,230,230))
+        self.SetBackgroundColour(COLOR_230)
         self.SetClientSize(wx.Size(195,220))
         vbox = wx.BoxSizer(wx.VERTICAL)
 
@@ -641,7 +649,7 @@ class NormalNote(Note):
         ''' for overriding '''
         custombox = wx.BoxSizer(wx.HORIZONTAL)
         self.text = wx.TextCtrl(self.mainpanel,NormalNote.ID_TEXT,pos=(0,0),style=wx.TE_MULTILINE,name="text")
-        self.text.SetBackgroundColour(wx.Colour(240,240,240))
+        self.text.SetBackgroundColour(COLOR_240)
 
         custombox.Add(self.text,1,wx.EXPAND,1)
         self.mainpanel.SetSizer(custombox)
