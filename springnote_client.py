@@ -6,8 +6,6 @@ import lib.json as json
 from datetime import datetime
 
 class SpringnoteClient:
-#    CONSUMER_TOKEN = "wpRiJvvQy624FayfQ6Q"
-#    CONSUMER_TOKEN_SECRET = "GHY2La7yR2moQUXO2ETiuuiAtqFCCa37bO6uAXC6Yw"
     CONSUMER_TOKEN = "al8kiqVKqlpIwZBDBwI4WA"
     CONSUMER_TOKEN_SECRET = "SpdStIpIvw16A0R3KPuAaoUPceazM61h4nOjS8GM"
 
@@ -176,7 +174,6 @@ class SpringnoteClient:
         parameters = {'parent_id': str(parent_id)}
         url = self.set_url("pages.json", parameters)
 
-#        print "url : %s" % url
 
         oauth_request = self.create_oauth_request('GET', url, parameters)
 
@@ -185,10 +182,7 @@ class SpringnoteClient:
         # response
         response = connection.getresponse()
         body = response.read()
-#        print "body: %s" %body
         raw_pages = self.handle_response(body)
-#        print "page: %s" % raw_pages
-#        raw_pages의 각 identifier를 이용해 가져와야 함 (raw_pages엔 본문이 없음)
         pages = []
         if not raw_pages:
             return None
@@ -322,7 +316,6 @@ class Page:
             if attr_name in page_dict:
                 result[attr_name] = page_dict[attr_name]
 
-#        return json.dumps({'page':result})
         json_ustr = json.dumps({'page':result},ensure_ascii=False)
         return json_ustr.encode('utf-8')
 
@@ -340,7 +333,6 @@ class Page:
         """ update parsing json string """
 
         if type(data) == list:
-            #data = data[0]
             return [Page.update_from_dict(each_data) for each_data in data]
 
         data = data["page"]
@@ -404,44 +396,7 @@ class Page:
 
 
 def run():
-    token = "wpRiJvvQy624FayfQ6Q"
-    token_secret = "GHY2La7yR2moQUXO2ETiuuiAtqFCCa37bO6uAXC6Yw"
-    id = 2827114
-    access_key = "FHksYUxDz5sNpxXZ3Yq9Qg"
-    access_secret = "5ILhwSbmQCFBL4A8orCBna8zwLAbC2iIRPxRfRZgQls"
-
-    client = SpringnoteClient()
-#    request_token = client.fetch_request_token()
-#    print client.authorize_url(request_token)
-#    raw_input("please Enter...")
-#    access_token = client.fetch_access_token(request_token)
-    access_token = client.set_access_token_directly(access_key,access_secret)
-    print access_token.key, access_token.secret
-
-#    page = client.get_page(id, domain='loocaworld')
-#    page = client.get_page_with_tag(client.DEFAULT_ROOT_TAG)
-#    page = client.get_root_page()
-#    page = client.create_page(title="titleis this7",source="this is body",domain="loocaworld")
-#    page = client.create_page(title="titleis this9",source="",rel=None)
-
-#    pages = client.get_pages_with_parent_id(2449362)
-    page = client.get_page(2586456)
-    print "----body----"
-#    print "pages : %s" % pages
-    print page.source
-#    print result
-    print "------------"
-
-    mybody = '<div id=\"header\" style=\"display:none;\">this is sexy header</div><p>title</p><p>bon moon</p>'
-#    page = client.create_page(title="mytest",source=mybody)
-#    page = client.create_page(title="mytest3",source='<div>gggggg</div>')
-
-#    page.title = "EDITED TITLE!!!"
-#    page.source = "This page is hacked"
-#    newpage = client.update_page(page,domain='loocaworld')
-
-
-#    result = client.delete_page(page.identifier,domain='loocaworld')
+    print "run with springmemo.py"
     
 
 

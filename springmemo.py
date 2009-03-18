@@ -31,15 +31,6 @@ class SpringMemo:
         self.init_all_memos()
 
 
-#    def find_access_file(self):
-#        if os.path.exists(DEFAULT_FILE_NAME):
-#            access_file = file(DEFAULT_FILE_NAME,'r')
-#            str = access_file.read()
-#            str = str[0:len(str)-1]  # EOF 삭제
-#            arr = str.split(' ')
-#            return arr
-#        return None
-
     def get_user_file(self):
         ''' 사용자의 컴퓨터에 저장될 파일을 연다
             access_token, access_token_secret, is_auth_save
@@ -49,7 +40,6 @@ class SpringMemo:
             data_arr = user_file.read().split('\n')
             self.access_token = data_arr[0]
             self.access_token_secret = data_arr[1]
-#            self.is_auth_save = bool(data_arr[2])
             self.is_auth_save = True #이미 저장되어있으므로 지금도 True
             user_file.close()
             return True
@@ -76,13 +66,10 @@ class SpringMemo:
             없으면 client를 이용해 url을 만들고 인증하여 설정 '''
         client = springnote_client.SpringnoteClient()
         confirmed = False
-#        access_arr = self.find_access_file()
-#        if access_arr:
         if self.get_user_file():
             client.set_access_token_directly(self.access_token,self.access_token_secret)
         else:
             request_token = client.fetch_request_token()
-#            self.notegui.show_authorize(authorize_url(request_token))
 
             while confirmed == False:
                 self.authdialog = notegui.AuthDialog(auth_url=client.authorize_url(request_token))
@@ -113,7 +100,6 @@ class SpringMemo:
         ''' Memo 생성, self.memos에 append '''
         ''' sub : rootpage의 sub로 생성한다 '''
         if sub == True:
-#            memo = Memo(type,title,rel=self.rootmemo.page.identifier)
             memo = Memo.create(type,title,rel=self.rootmemo.page.identifier)
         else:
             memo = Memo(type,title,rel)
@@ -143,7 +129,6 @@ class Memo:
     def __init__(self, view=None, page=None, header=None, pos=None):
         self.view = view
         self.page = page
-#        self.type = type       ?? 필요한가 ??
         self.header = header
         self.pos = pos
 
@@ -168,7 +153,6 @@ class Memo:
         '''
         self.header.set_pos(self.view.GetPos())
         source = self.get_save_source()
-#        print "source :: %s" % source
 
         self.page.save_page(source=source)
 
@@ -205,8 +189,6 @@ class Memo:
         '''
         header = PageHeader.parse_header_from_source(page.source)
         memo = Memo(page=page,header=header)
-#        if header.is_open == True: #열린상태일때만 생김
-#            memo.view = memo.get_view(header.type,page.title)
         memo.view = memo.get_view(header.type,page.title) #무조건 생김
         memo.view.SetPos(wx.Point(header.x,header.y))
         return memo
@@ -216,12 +198,10 @@ class Memo:
         self.page.title = title
 
     def get_view(self,type,title,is_open=True,parent=None,id=-1):
-#        print "type :: %d" % type
         if type == MEMO_TYPE_NORMAL:
             view = notegui.NormalNote(parent,id,title,self)
         if type == MEMO_TYPE_TODO:
             view = notegui.TodoNote(parent,id,title,self)
-#        print "type : %d" % type
         return view
 
 
@@ -246,7 +226,6 @@ class PageHeader:
     attrset = ['is_open', 'type', 'x', 'y']
 
     def __init__(self,type=None,is_open=True,pos=None):
-#        self.is_open = None
         for attr_name in PageHeader.attrset:
             setattr(self, attr_name, None)
         if type:
@@ -278,7 +257,6 @@ class PageHeader:
         ph = PageHeader()
         header_text = PageHeader.re_find_header.findall(source)
         attrs = PageHeader.re_get_all_attrs.findall(header_text[0])
-#        print attrs
 
         for attrset in attrs:
             setattr(ph,attrset[0],PageHeader.typeset[attrset[0]](attrset[1]))
@@ -292,36 +270,14 @@ class PageHeader:
 def run():
     app = notegui.wx.App()
     springmemo = SpringMemo()
-#    springmemo.user_authorize()
-#    print "now getroot"
-#    springmemo.rootmemo = Memo.get_root_memo()
-#    print "root :: %s" % springmemo.rootmemo.page
-#    springmemo.init_all_memos()
 
     app.MainLoop()
-
-def run2():
-    is_open = True
-    source = '''
-<div id="body">
-this is real body.<br />
-and this is a text.<br />
-</div>
-Here is a HIDDEN header for 
-<div id="page_header"><p id="is_open">%s</p><p id="type">1</p></div>
-SpringMemo! Don't delete this line PLEASE :)
-        ''' % (str(is_open))
-
-    header = PageHeader.parse_header_from_source(source)
-
-
 
 
 #### for Main ####
 
 if __name__=="__main__":
     run()
-#    run2()
 
 
 

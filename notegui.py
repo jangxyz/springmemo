@@ -18,9 +18,9 @@ COLOR_220 = wx.Colour(220,220,220)
 class NoteTaskBar(wx.TaskBarIcon):
     def __init__(self,controller=None):
         wx.TaskBarIcon.__init__(self)
-#        icon = wx.Icon('./nicotine2.ico', wx.BITMAP_TYPE_ICO,25,25)
-        icon = wx.Icon('./icons2/task_purple25.ico', wx.BITMAP_TYPE_ICO,50,50)
-        icon.SetWidth(25)
+#        icon = wx.Icon('./icons2/task_purple25.ico', wx.BITMAP_TYPE_ICO,25,25)
+        icon = wx.Icon('./icons2/task_purple25.ico', wx.BITMAP_TYPE_ANY,25,25)
+#        icon.SetWidth(25)
 #        icon.SetHeight(25)
         self.SetIcon(icon,"springmemo")
         self.initMenu()
@@ -48,8 +48,8 @@ class NoteTaskBar(wx.TaskBarIcon):
         wx.EVT_TASKBAR_RIGHT_UP(self,self.OnTaskBarRight)
 
     def OnTaskBarRight(self,event):
-        print event
         self.PopupMenu(self.menu)
+        print 'aaaa'
 
     def OnNew(self,event):
         if self.select_memo == None:
@@ -166,11 +166,13 @@ class MemoList(wx.Frame):
         self.Show(True)
 
     def __set_properties(self):
-        # begin wxGlade: MyFrame.__set_properties
-#        self.SetTitle("Note List")
-#        self.SetScrollbar(wx.VERTICAL,10,10,10)
-#        self.SetSize((310,400))
         self.SetMinSize((310,50))
+
+        defpos = wx.GetDisplaySize()
+        defpos.x = defpos.x / 2
+        defpos.y = defpos.y / 2
+        self.SetPosition((defpos.x,defpos.y))
+
 
     def __do_layout(self):
         self.mainbox = wx.BoxSizer(wx.VERTICAL)
@@ -303,10 +305,13 @@ class ConfigDlg(wx.Dialog):
         # end wxGlade
 
     def __set_properties(self):
-#        self.SetSize((310, 150))
-#        self.text_title.SetMinSize((200, 23))
         self.SetBackgroundColour(COLOR_240)
         self.checkbox_auth_save.SetValue(self.is_auth_save)
+
+        defpos = wx.GetDisplaySize()
+        defpos.x = defpos.x / 2
+        defpos.y = defpos.y / 2
+        self.SetPosition((defpos.x,defpos.y))
 
     def __do_layout(self):
         # begin wxGlade: MyDialog.__do_layout
@@ -342,10 +347,9 @@ class ConfigDlg(wx.Dialog):
 
 class SelectNoteDlg(wx.Dialog):
     def __init__(self,parent,id,title):
-        # begin wxGlade: MyDialog1.__init__
         wx.Dialog.__init__(self, parent, id, title,style=wx.NO_BORDER)
         self.SetBackgroundColour(COLOR_240)
-        self.radio_type = wx.RadioBox(self, -1, u"종류", choices=[u"기본노트", u"To-do", u"캘린더"], majorDimension=3, style=wx.RA_SPECIFY_COLS)
+        self.radio_type = wx.RadioBox(self, -1, u"종류", choices=[u"기본노트", u"To-do"], majorDimension=2, style=wx.RA_SPECIFY_COLS)
         self.label_1 = wx.StaticText(self, -1, u"제목")
         self.text_title = wx.TextCtrl(self, -1, "")
 
@@ -371,14 +375,15 @@ class SelectNoteDlg(wx.Dialog):
     
 
     def __set_properties(self):
-        # begin wxGlade: MyDialog1.__set_properties
         self.SetSize((310, 150))
         self.radio_type.SetSelection(0)
         self.text_title.SetMinSize((200, 23))
+        defpos = wx.GetDisplaySize()
+        defpos.x = defpos.x / 2
+        defpos.y = defpos.y / 2
+        self.SetPosition((defpos.x,defpos.y))
 
     def __do_layout(self):
-        # begin wxGlade: MyDialog1.__do_layout
-
         sizer_1 = wx.BoxSizer(wx.VERTICAL)
         sizer_2 = wx.BoxSizer(wx.HORIZONTAL)
         sizer_3 = wx.BoxSizer(wx.HORIZONTAL)
@@ -394,13 +399,15 @@ class SelectNoteDlg(wx.Dialog):
         sizer_1.Add(sizer_2, 1, wx.TOP|wx.BOTTOM|wx.ALIGN_RIGHT|wx.ALIGN_CENTER_HORIZONTAL|wx.ALIGN_CENTER_VERTICAL, 10)
         self.SetSizer(sizer_1)
         self.Layout()
-        # end wxGlade
 
 
     def OnRadioChanged(self,evt):
         self.selected_type = self.radio_type.GetSelection()
 
     def OnOk(self,evt):
+        if self.selected_type == 1:
+            wx.MessageBox(u"현재 버전에서는 To-do메모를 지원하지 않습니다.",u"죄송합니다.")
+            return
         if len(self.text_title.GetValue()) > 0:
             self.EndModal(wx.ID_OK)
 
@@ -515,7 +522,6 @@ class Note(wx.Frame):
     def SetPos(self,pos):
         self.pos = pos
         defpos = wx.GetDisplaySize()
-#        print "defx : %d, pos : %d" % (defpos.x, self.pos.x)
         self.SetPosition((defpos.x-self.pos.x,self.pos.y))
 
     def GetPos(self):
@@ -543,11 +549,8 @@ class Note(wx.Frame):
         self.title = wx.StaticText(self,-1,'',(0,0))
         self.title.Wrap(10)
         self.button_status = wx.BitmapButton(self,-1,wx.Bitmap("./icons2/green1.png"),style=wx.NO_BORDER,size=(20,20))
-#        self.button_status.SetBitmapHover(wx.Bitmap("./icons2/green2.png"))
 
         self.button_close = wx.BitmapButton(self,-1,wx.Bitmap("./icons2/red1.png"),style=wx.NO_BORDER,size=(20,20))
-#        self.button_close.SetBitmapHover(wx.Bitmap("./icons2/red2.png"))
-#        self.button_close.SetBitmapHover(wx.Bitmap("./icons2/green2.png"))
         hbox.Add(self.panel_move,0,wx.EXPAND,1)
         hbox.Add(self.title,1,wx.EXPAND|wx.LEFT|wx.TOP,5)
         hbox.Add(self.button_status,0,wx.EXPAND,0)
@@ -673,7 +676,6 @@ class NormalNote(Note):
     def OnChange(self,evt):
         self.SetStatusModified()
         self.StartTimer()
-#        print "mmm"
 
     def GetBodyFromSource(self,source):
         ''' source값을 변경하여 현재 body를 채운다
