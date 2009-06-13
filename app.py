@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-from env import *
+from config import *
 
 import os, sys, re
 from models import springnote_client

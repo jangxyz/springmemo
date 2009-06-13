@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding:utf8 -*-
 
-from env import *
+from config import *
 
 import wx, wx.grid
 import os, re
