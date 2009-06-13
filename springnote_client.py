@@ -1,7 +1,7 @@
 #!/usr/bin/python
 #-*- coding:utf8 -*-
 import oauth
-import httplib,urllib
+import httplib, urllib
 import lib.json as json
 from datetime import datetime
 
@@ -254,14 +254,17 @@ class SpringnoteError:
     class InvalidOauthRequest(RuntimeError): pass
     class PageNotFound(RuntimeError): pass
 
+def strptime(date_string, format):
+    import time
+    return datetime(*(time.strptime(date_string, format)[0:6]))
 
 class Page:
     typeset = {
         'identifier': int,
         'relation_is_part_of': int,
 
-        'date_created': lambda x: datetime.strptime(x,"%Y/%m/%d %H:%M:%S +0000"),
-        'date_modified': lambda x: datetime.strptime(x,"%Y/%m/%d %H:%M:%S +0000"),
+        'date_created':  lambda x: strptime(x,"%Y/%m/%d %H:%M:%S +0000"),
+        'date_modified': lambda x: strptime(x,"%Y/%m/%d %H:%M:%S +0000"),
         'tags': lambda x: x.split()
     }
     attrset = ["rights", "source", "creator", "date_created", "contributor_modified", "date_modified", "relation_is_part_of", "identifier", "tags", "title"]
@@ -388,10 +391,6 @@ class Page:
         for attr_name in Page.attrset:
             if hasattr(page, attr_name):
                 setattr(self, attr_name, getattr(page, attr_name))
-
-
-
-
 
 
 
