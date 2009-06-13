@@ -1,9 +1,8 @@
 #!/usr/bin/python
-#-*- coding:utf8 -*-
-import oauth
+# -*- coding: utf-8 -*-
 import httplib, urllib
-import lib.json as json
 from datetime import datetime
+from lib import oauth, json
 
 class SpringnoteClient:
     CONSUMER_TOKEN = "al8kiqVKqlpIwZBDBwI4WA"

@@ -1,9 +1,10 @@
-#-*-coding:utf8-*-
 #!/usr/bin/python
-import wx
-import wx.grid
-import os
-import re
+# -*- coding:utf8 -*-
+
+from env import *
+
+import wx, wx.grid
+import os, re
 import webbrowser
 
 DEFAULT_TIMER_TIME = 5000
@@ -14,11 +15,10 @@ COLOR_230 = wx.Colour(230,230,230)
 COLOR_220 = wx.Colour(220,220,220)
 
 
-
 class NoteTaskBar(wx.TaskBarIcon):
     def __init__(self,controller=None):
         wx.TaskBarIcon.__init__(self)
-        icon = wx.Icon('./icons2/task_purple25.ico', wx.BITMAP_TYPE_ANY,25,25)
+        icon = wx.Icon(ICON_DIR+'/task_purple25.ico', wx.BITMAP_TYPE_ANY,25,25)
         self.SetIcon(icon,"springmemo")
         self.initMenu()
         self.select_memo = None
@@ -464,7 +464,7 @@ class TitleBar(wx.Panel):
         self.titlebox = wx.BoxSizer(wx.HORIZONTAL)
         self.panel_move = MovePanel(self,pos=(0,0),size=(20,20),style=wx.SIMPLE_BORDER)
         self.title = wx.StaticText(self,-1,'',(0,0))
-        self.button_close = wx.BitmapButton(self,-1,wx.Bitmap("./icons2/red1.png"),style=wx.NO_BORDER,size=(20,20))
+        self.button_close = wx.BitmapButton(self,-1,wx.Bitmap(ICON_DIR+"/red1.png"),style=wx.NO_BORDER,size=(20,20))
 
         self.__do_layout()
         self.SetEvent()
@@ -536,9 +536,9 @@ class Note(wx.Frame):
         self.panel_move = MovePanel(self,pos=(0,0),size=(20,20),style=wx.SIMPLE_BORDER)
         self.title = wx.StaticText(self,-1,'',(0,0))
         self.title.Wrap(10)
-        self.button_status = wx.BitmapButton(self,-1,wx.Bitmap("./icons2/green1.png"),style=wx.NO_BORDER,size=(20,20))
+        self.button_status = wx.BitmapButton(self,-1,wx.Bitmap(ICON_DIR+"/green1.png"),style=wx.NO_BORDER,size=(20,20))
 
-        self.button_close = wx.BitmapButton(self,-1,wx.Bitmap("./icons2/red1.png"),style=wx.NO_BORDER,size=(20,20))
+        self.button_close = wx.BitmapButton(self,-1,wx.Bitmap(ICON_DIR+"/red1.png"),style=wx.NO_BORDER,size=(20,20))
         hbox.Add(self.panel_move,0,wx.EXPAND,1)
         hbox.Add(self.title,1,wx.EXPAND|wx.LEFT|wx.TOP,5)
         hbox.Add(self.button_status,0,wx.EXPAND,0)
@@ -576,12 +576,12 @@ class Note(wx.Frame):
     
     def SetStatusModified(self):
         self.is_modified = True
-        self.button_status.SetBitmapLabel(wx.Bitmap("./icons2/blue1.png"))
+        self.button_status.SetBitmapLabel(wx.Bitmap(ICON_DIR+"/blue1.png"))
 
 
     def SetStatusRecent(self):
         self.is_modified = False
-        self.button_status.SetBitmapLabel(wx.Bitmap("./icons2/green1.png"))
+        self.button_status.SetBitmapLabel(wx.Bitmap(ICON_DIR+"/green1.png"))
 
 
     def SetTitle(self,str):
@@ -855,7 +855,6 @@ class TodoNote(Note):
         for item in self.grid.table.data:
             rval += "[" + str(item[0]) + "], " + item[1] + ", (" + str(item[2]) + ")\n"
         return rval
-
 
 
 

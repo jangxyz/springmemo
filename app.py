@@ -1,16 +1,16 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-import os
-import springnote_client
-import notegui
+
+from env import *
+
+import os, sys, re
+from models import springnote_client
+from views  import notegui
 import wx
-import re
 
 MEMO_TYPE_NORMAL = 1
-MEMO_TYPE_TODO = 2
+MEMO_TYPE_TODO   = 2
 
-
-#DEFAULT_FILE_NAME = "access_file.txt"
 DEFAULT_FILE_NAME = "user_file.txt"
 
 class SpringMemo:
@@ -62,7 +62,7 @@ class SpringMemo:
 
 
     def user_authorize(self):
-        ''' authorize 파일이 있는지 확인하고 있으면 client바로 설정,
+        ''' authorize 파일이 있는지 확인하고 있으면 client 바로 설정,
             없으면 client를 이용해 url을 만들고 인증하여 설정 '''
         client = springnote_client.SpringnoteClient()
         confirmed = False
@@ -122,7 +122,7 @@ class SpringMemo:
         ''' note_update가 True면 전체 Memo를 돌아가며 최신인지 아닌지 판단,
             저장한다. save_auth가 True면, 현재 access_file과 비교하여 저장
         '''
-        exit(1)
+        sys.exit()
         
 
 class Memo:
@@ -265,19 +265,14 @@ class PageHeader:
 
 
 #### Run() Method ####
-
-
 def run():
     app = notegui.wx.App()
     springmemo = SpringMemo()
-
     app.MainLoop()
 
 
 #### for Main ####
-
 if __name__=="__main__":
     run()
-
 
 
